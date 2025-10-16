@@ -88,6 +88,7 @@ frappe.ui.form.on("Leave Application", {
 		}
 	},
 
+
 	refresh: function (frm) {
 		hrms.leave_utils.add_view_ledger_button(frm);
 		if (frm.is_new()) {
@@ -113,6 +114,217 @@ frappe.ui.form.on("Leave Application", {
 			frm.trigger("make_dashboard");
 		}
 		frm.trigger("set_form_buttons");
+		frm.trigger("handle_submit_button");
+		frm.trigger("ensure_approval_chain");
+
+	
+		// Show approve/reject buttons for current approver (Material Request style)
+		console.log("Debug - Session User:", frappe.session.user);
+		console.log("Debug - Status:", frm.doc.status);
+		console.log("Debug - Docstatus:", frm.doc.docstatus);
+		console.log("Debug - Approvers:", frm.doc.approvers);
+		
+		// Check if current user is in the approvers table and has New status (Material Request style)
+		let is_current_approver = false;
+		if (frm.doc.approvers && frm.doc.approvers.length > 0) {
+			for (let approver of frm.doc.approvers) {
+				if (approver.approver === frappe.session.user && approver.status === "New") {
+					is_current_approver = true;
+					break;
+				}
+			}
+		}
+		
+		if (frm.doc.docstatus === 0 && is_current_approver && 
+			(frm.doc.status === "Open" || frm.doc.status === "Pending Approval" || frm.doc.status === "Applied")) {
+			
+			frm.add_custom_button(__("Approve"), function () {
+				frappe.prompt(
+					[
+						{
+							fieldname: "comments",
+							fieldtype: "Small Text",
+							label: __("Comments (Optional)"),
+							reqd: 0,
+						},
+					],
+					function (values) {
+						frappe.call({
+							method: "hrms.hr.doctype.leave_application.leave_application.approve_application",
+							args: {
+								name: frm.doc.name,
+								comments: values.comments,
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frm.reload_doc();
+								}
+							},
+						});
+					},
+					__("Approve Leave Application"),
+					__("Approve")
+				);
+			}, "Actions");
+
+			frm.add_custom_button(__("Reject"), function () {
+				frappe.prompt(
+					[
+						{
+							fieldname: "reason",
+							fieldtype: "Small Text",
+							label: __("Reason for Rejection"),
+							reqd: 1,
+						},
+						{
+							fieldname: "comments",
+							fieldtype: "Small Text",
+							label: __("Additional Comments (Optional)"),
+							reqd: 0,
+						},
+					],
+					function (values) {
+						frappe.call({
+							method: "hrms.hr.doctype.leave_application.leave_application.reject_application",
+							args: {
+								name: frm.doc.name,
+								reason: values.reason,
+								comments: values.comments,
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frm.reload_doc();
+								}
+							},
+						});
+					},
+					__("Reject Leave Application"),
+					__("Reject")
+				);
+			}, "Actions");
+		}
+	},
+
+	handle_submit_button: function (frm) {
+		// Hide submit button if approval chain exists and current user is not the applicant
+		if (frm.doc.approval_chain && frm.doc.approval_chain.length > 0) {
+			// Check if current user is the applicant
+			frappe.db.get_value("Employee", frm.doc.employee, "user_id", (r) => {
+				if (frappe.session.user !== r.user_id) {
+					// Hide submit button for approvers
+					frm.page.clear_primary_action();
+					console.log("Debug - Submit button hidden for approver:", frappe.session.user);
+				} else {
+					console.log("Debug - Submit button kept for applicant:", frappe.session.user);
+				}
+			});
+		}
+	},
+
+	ensure_approval_chain: function (frm) {
+		// Ensure approval chain is populated when document is loaded
+		// DISABLED: This was causing infinite loops
+		// Approval chain will be set up automatically during document submission
+		/*
+		if (!frm.is_new() && frm.doc.docstatus === 0 && (!frm.doc.approval_chain || frm.doc.approval_chain.length === 0)) {
+			// Auto-setup approval chain
+			frappe.call({
+				method: "hrms.hr.doctype.leave_application.leave_application.setup_approval_chain_for_document",
+				args: {
+					name: frm.doc.name,
+				},
+				callback: function (r) {
+					if (r.message) {
+						frm.reload_doc();
+					}
+				},
+			});
+		}
+		*/
+		
+		// Also trigger button setup after a short delay to ensure approval chain is loaded
+		setTimeout(function() {
+			frm.trigger("setup_approval_buttons");
+		}, 1000);
+		
+	},
+	
+	setup_approval_buttons: function (frm) {
+		// Add refresh approvers button for testing
+		if (frm.doc.employee && frm.doc.docstatus === 0) {
+			frm.add_custom_button(__("Refresh Approvers"), function () {
+				frm.trigger("populate_approvers");
+			}, __("Actions"));
+		}
+		
+		// Don't clear custom buttons to preserve debug buttons
+		// frm.page.clear_custom_actions();
+		
+		// Check if current user is in the approvers table and has New status (Material Request style)
+		let is_current_approver = false;
+		if (frm.doc.approvers && frm.doc.approvers.length > 0) {
+			for (let approver of frm.doc.approvers) {
+				if (approver.approver === frappe.session.user && approver.status === "New") {
+					// If respect_approver_order is enabled, check if this is the first "New" approver
+					if (frm.doc.respect_approver_order) {
+						let is_first_new_approver = true;
+						for (let i = 0; i < frm.doc.approvers.indexOf(approver); i++) {
+							if (frm.doc.approvers[i].status === "New") {
+								is_first_new_approver = false;
+								break;
+							}
+						}
+						if (is_first_new_approver) {
+							is_current_approver = true;
+						}
+					} else {
+						is_current_approver = true;
+					}
+					break;
+				}
+			}
+		}
+		
+		console.log("Debug - Is Current Approver:", is_current_approver);
+		console.log("Debug - Status:", frm.doc.status);
+		console.log("Debug - Docstatus:", frm.doc.docstatus);
+		console.log("Debug - Session User:", frappe.session.user);
+		console.log("Debug - Approvers Table:", frm.doc.approvers);
+		console.log("Debug - Respect Approver Order:", frm.doc.respect_approver_order);
+		
+		// Material Request style approval - only for submitted documents
+		if (frm.doc.docstatus === 1 && is_current_approver && frm.doc.status === "Pending Approval") {
+			
+			frm.add_custom_button(__("Approve"), function () {
+				frappe.call({
+					method: "hrms.hr.doctype.leave_application.leave_application.approve_reject",
+					args: {
+						doc: frm.doc.name,
+						action: "1"  // 1 = Approve, 0 = Reject
+					},
+					callback: function (r) {
+						if (!r.exc) {
+							frm.reload_doc();
+						}
+					},
+				});
+			}, "Actions");
+
+			frm.add_custom_button(__("Reject"), function () {
+				frappe.call({
+					method: "hrms.hr.doctype.leave_application.leave_application.approve_reject",
+					args: {
+						doc: frm.doc.name,
+						action: "0"  // 1 = Approve, 0 = Reject
+					},
+					callback: function (r) {
+						if (!r.exc) {
+							frm.reload_doc();
+						}
+					},
+				});
+			}, "Actions");
+		}
 	},
 
 	async set_employee(frm) {
@@ -125,9 +337,53 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	employee: function (frm) {
+		console.log(`Employee changed to: ${frm.doc.employee}`);
 		frm.trigger("make_dashboard");
 		frm.trigger("get_leave_balance");
 		frm.trigger("set_leave_approver");
+		frm.trigger("populate_approvers");
+	},
+
+	populate_approvers: function(frm) {
+		// Auto-populate approvers when employee is selected - ALWAYS update when employee changes
+		if (frm.doc.employee) {
+			// Call the backend to populate approvers based on employee's approval chain
+			frappe.call({
+				method: "hrms.hr.doctype.leave_application.leave_application.populate_approvers_from_chain",
+				args: {
+					employee: frm.doc.employee
+				},
+				callback: function(r) {
+					if (r.message && r.message.approvers) {
+						// Always clear existing approvers and repopulate (for employee changes)
+						frm.clear_table("approvers");
+						
+						// Add approvers from the approval chain
+						r.message.approvers.forEach(function(approver) {
+							frm.add_child("approvers", {
+								approver: approver,
+								status: "New"
+							});
+						});
+						
+						// Set respect_approver_order to checked
+						frm.set_value("respect_approver_order", 1);
+						
+						// Set leave_approver to first approver for email notifications
+						if (r.message.approvers.length > 0) {
+							frm.set_value("leave_approver", r.message.approvers[0]);
+							console.log(`Set leave_approver to first approver: ${r.message.approvers[0]}`);
+						}
+						
+						frm.refresh_field("approvers");
+						frm.refresh_field("respect_approver_order");
+						frm.refresh_field("leave_approver");
+						
+						console.log(`Approvers updated for employee ${frm.doc.employee}:`, r.message.approvers);
+					}
+				}
+			});
+		}
 	},
 
 	leave_approver: function (frm) {
@@ -291,6 +547,37 @@ frappe.ui.form.on("Leave Application", {
 		});
 		$(".form-message").prop("hidden", true);
 	},
+
+	setup_approval_chain: function (frm) {
+		// Call the backend to setup the approval chain
+		frappe.call({
+			method: "hrms.hr.doctype.leave_application.leave_application.setup_approval_chain_for_document",
+			args: {
+				name: frm.doc.name
+			},
+			callback: function (r) {
+				if (!r.exc) {
+					frm.reload_doc();
+				}
+			}
+		});
+	},
+
+	populate_approval_chain: function (frm) {
+		// Call the backend to populate the approval chain
+		frappe.call({
+			method: "hrms.hr.doctype.leave_application.leave_application.populate_approval_chain_table",
+			args: {
+				name: frm.doc.name
+			},
+			callback: function (r) {
+				if (!r.exc) {
+					frm.reload_doc();
+				}
+			}
+		});
+	},
+
 });
 
 frappe.tour["Leave Application"] = [

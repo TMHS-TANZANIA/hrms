@@ -364,3 +364,7 @@ company_data_to_be_ignored = [
 	"Employee Onboarding Template",
 	"Employee Separation Template",
 ]
+fixtures = [
+	"Salary Component",
+	"Salary Structure",
+]
