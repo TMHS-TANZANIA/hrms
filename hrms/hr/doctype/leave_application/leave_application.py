@@ -1601,15 +1601,7 @@ def is_hr_manager(employee):
 			"role": "HR Manager"
 		})
 
-		if has_role:
-			return True
-
-		# Fallback: check if user name contains 'hr' and 'manager'
-		user_doc = frappe.get_doc("User", user_id)
-		if "hr" in user_doc.name.lower() and "manager" in user_doc.name.lower():
-			return True
-
-		return False
+		return True if has_role else False
 	except Exception as e:
 		frappe.log_error(f"Error checking if employee {employee} is HR Manager: {str(e)}", "HR Manager Check Error")
 		return False
@@ -1636,13 +1628,6 @@ def is_manager(employee):
 		if has_role:
 			return True
 
-		# Fallback: check if employee name or department contains 'manager'
-		employee_name = employee_doc.employee_name.lower()
-		department = (employee_doc.department or "").lower()
-
-		if "manager" in employee_name or "manager" in department:
-			return True
-
 		return False
 	except Exception as e:
 		frappe.log_error(f"Error checking if employee {employee} is Manager: {str(e)}", "Manager Check Error")
@@ -1661,14 +1646,6 @@ def get_hr_manager():
 
 	if hr_manager:
 		return hr_manager[0][0]
-
-	# Fallback: look for users with 'hr' in name
-	hr_users = frappe.get_all("User", 
-		filters={"enabled": 1, "name": ["like", "%hr%"]},
-		fields=["name"]
-	)
-	if hr_users:
-		return hr_users[0].name
 
 	return None
 
