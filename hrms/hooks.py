@@ -11,10 +11,10 @@ app_home = "/app/overview"
 
 add_to_apps_screen = [
 	{
-		"name": "hrms",
+		"name": app_name,
 		"logo": "/assets/hrms/images/frappe-hr-logo.svg",
-		"title": "Frappe HR",
-		"route": "/app/overview",
+		"title": app_title,
+		"route": app_home,
 		"has_permission": "hrms.hr.utils.check_app_permission",
 	}
 ]
