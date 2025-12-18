@@ -1,11 +1,11 @@
 app_name = "hrms"
-app_title = "Frappe HR"
-app_publisher = "Frappe Technologies Pvt. Ltd."
+app_title = "HRMS"
+app_publisher = "TMHS Group"
 app_description = "Modern HR and Payroll Software"
-app_email = "contact@frappe.io"
+app_email = "system@tmhsgroup.com"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
-source_link = "http://github.com/frappe/hrms"
+source_link = "https://github.com/TMHS-TANZANIA/hrms"
 app_logo_url = "/assets/hrms/images/frappe-hr-logo.svg"
 app_home = "/app/overview"
 
