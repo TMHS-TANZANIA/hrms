@@ -1548,17 +1548,6 @@ def get_leave_approval_chain(employee):
 				approval_chain.append(md)
 				frappe.log_error(f"Manager - Level 2 MD: {md}", "Approval Chain Debug")
 
-		elif department.lower() == "administration":
-			# Administration Employee: HR Manager → MD (2 levels)
-			hr_manager = get_hr_manager()
-			md = get_managing_director()
-
-			if hr_manager:
-				approval_chain.append(hr_manager)
-				frappe.log_error(f"Administration - Level 1 HR Manager: {hr_manager}", "Approval Chain Debug")
-			if md and md not in approval_chain:
-				approval_chain.append(md)
-				frappe.log_error(f"Administration - Level 2 MD: {md}", "Approval Chain Debug")
 
 		else:
 			# Other Department Employee: Department Manager → HR Manager → MD (3 levels)
@@ -1566,6 +1555,9 @@ def get_leave_approval_chain(employee):
 			if employee_doc.leave_approver:
 				approval_chain.append(employee_doc.leave_approver)
 				frappe.log_error(f"Other Dept - Level 1 Department Manager: {employee_doc.leave_approver}", "Approval Chain Debug")
+			else:
+				approval_chain.append(employee_doc.reports_to)
+				frappe.log_error(f"Other Dept - Level 1 Department Manager: {employee_doc.manager}", "Approval Chain Debug")
 
 			# Level 2: HR Manager
 			hr_manager = get_hr_manager()
@@ -1622,7 +1614,7 @@ def is_manager(employee):
 		# Check if user has Manager role
 		has_role = frappe.db.exists("Has Role", {
 			"parent": user_id,
-			"role": "Manager"
+			"role": "Department Manager"
 		})
 
 		if has_role:
@@ -1663,15 +1655,6 @@ def get_managing_director():
 	if md:
 		return md[0][0]
 
-	# Fallback: look for users with 'md' in name
-	md_users = frappe.get_all("User", 
-		filters={"enabled": 1, "name": ["like", "%md%"]},
-		fields=["name"]
-	)
-	if md_users:
-		return md_users[0].name
-
-	return None
 
 @frappe.whitelist()
 def populate_approvers_from_chain(employee):
