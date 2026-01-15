@@ -1517,7 +1517,7 @@ def get_leave_approval_chain(employee):
 		# Check department to determine approval chain
 		department = employee_doc.department or ""
 
-		if department.lower() == "human resources":
+		if department.lower() == "HR & Administration":
 			# HR Employee: HR Manager → MD (2 levels)
 			hr_manager = get_hr_manager()
 			md = get_managing_director()
