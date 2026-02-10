@@ -1515,6 +1515,7 @@ def get_leave_approval_chain(employee):
 	2. Add HR Manager if not already present (no duplicates)
 	3. Add MD at the end if not already present (no duplicates)
 	4. MD always comes last
+	5. CRITICAL: Never include the applying employee's user_id in the approval chain
 	
 	Returns:
 		list: List of user IDs representing the approval chain
@@ -1528,12 +1529,18 @@ def get_leave_approval_chain(employee):
 		approval_chain = []
 		visited = set()  # Prevent circular references
 		
+		# Get the applying employee's user_id - MUST exclude from approval chain
+		applying_employee_user_id = frappe.db.get_value("Employee", employee, "user_id")
+		
 		# Step 1: Follow reports_to chain upward
 		current_employee = employee
 		max_iterations = 20  # Safety limit to prevent infinite loops
 		iteration_count = 0
 		
-		frappe.log_error(f"Starting approval chain for employee {employee}", "Approval Chain Debug")
+		frappe.log_error(
+			f"Starting approval chain for employee {employee} (user: {applying_employee_user_id})", 
+			"Approval Chain Debug"
+		)
 		
 		while current_employee and iteration_count < max_iterations:
 			iteration_count += 1
@@ -1562,11 +1569,18 @@ def get_leave_approval_chain(employee):
 				reports_to_user = frappe.db.get_value("Employee", reports_to, "user_id")
 				
 				if reports_to_user:
-					approval_chain.append(reports_to_user)
-					frappe.log_error(
-						f"Added {reports_to_user} (from employee {reports_to}) to approval chain",
-						"Approval Chain Debug"
-					)
+					# CRITICAL: Exclude applying employee from approval chain (prevents self-approval)
+					if reports_to_user != applying_employee_user_id:
+						approval_chain.append(reports_to_user)
+						frappe.log_error(
+							f"Added {reports_to_user} (from employee {reports_to}) to approval chain",
+							"Approval Chain Debug"
+						)
+					else:
+						frappe.log_error(
+							f"Skipped {reports_to_user} - same as applying employee (prevents self-approval)",
+							"Approval Chain Debug"
+						)
 				else:
 					frappe.log_error(
 						f"Warning: Employee {reports_to} has no user_id, skipping",
@@ -1586,11 +1600,18 @@ def get_leave_approval_chain(employee):
 		# Step 2: Add HR Manager if not already in chain
 		hr_manager = get_hr_manager()
 		if hr_manager and hr_manager not in approval_chain:
-			approval_chain.append(hr_manager)
-			frappe.log_error(
-				f"Added HR Manager {hr_manager} to approval chain (not already present)",
-				"Approval Chain Debug"
-			)
+			# CRITICAL: Don't add HR Manager if they are the applying employee
+			if hr_manager != applying_employee_user_id:
+				approval_chain.append(hr_manager)
+				frappe.log_error(
+					f"Added HR Manager {hr_manager} to approval chain (not already present)",
+					"Approval Chain Debug"
+				)
+			else:
+				frappe.log_error(
+					f"Skipped HR Manager {hr_manager} - same as applying employee (prevents self-approval)",
+					"Approval Chain Debug"
+				)
 		elif hr_manager and hr_manager in approval_chain:
 			frappe.log_error(
 				f"HR Manager {hr_manager} already in chain at position {approval_chain.index(hr_manager) + 1}, not adding duplicate",
@@ -1600,11 +1621,18 @@ def get_leave_approval_chain(employee):
 		# Step 3: Add MD at the end if not already in chain
 		md = get_managing_director()
 		if md and md not in approval_chain:
-			approval_chain.append(md)
-			frappe.log_error(
-				f"Added MD {md} to approval chain (not already present)",
-				"Approval Chain Debug"
-			)
+			# CRITICAL: Don't add MD if they are the applying employee
+			if md != applying_employee_user_id:
+				approval_chain.append(md)
+				frappe.log_error(
+					f"Added MD {md} to approval chain (not already present)",
+					"Approval Chain Debug"
+				)
+			else:
+				frappe.log_error(
+					f"Skipped MD {md} - same as applying employee (prevents self-approval)",
+					"Approval Chain Debug"
+				)
 		elif md and md in approval_chain:
 			frappe.log_error(
 				f"MD {md} already in chain at position {approval_chain.index(md) + 1}, not adding duplicate",

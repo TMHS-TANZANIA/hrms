@@ -9,30 +9,42 @@ This implementation uses a **reports_to hierarchy-based system** for leave appli
 
 The system builds the approval chain using the following steps:
 
-1. **Follow `reports_to` chain upward** from the employee
+1. **Get the applying employee's user_id** (critical for preventing self-approval)
+
+2. **Follow `reports_to` chain upward** from the employee
    - Start with the employee applying for leave
    - Get their `reports_to` field (their direct manager)
-   - Add that manager's `user_id` to the approval chain
+   - Add that manager's `user_id` to the approval chain **ONLY IF** it's not the applying employee
    - Move to that manager and repeat
    - Continue until no more `reports_to` exists (reached top of hierarchy)
 
-2. **Add HR Manager** if not already in the chain
+3. **Add HR Manager** if not already in the chain
    - Look for users with "HR Manager" role
-   - If HR Manager is not already in the chain, add them
-   - If HR Manager is already in the chain (from step 1), skip to avoid duplicates
+   - If HR Manager is not already in the chain, add them **ONLY IF** they are not the applying employee
+   - If HR Manager is already in the chain (from step 2), skip to avoid duplicates
 
-3. **Add Managing Director at the end** if not already in the chain
+4. **Add Managing Director at the end** if not already in the chain
    - Look for users with "Managing Director" role  
-   - If MD is not already in the chain, add them at the end
-   - If MD is already in the chain (from step 1), skip to avoid duplicates
+   - If MD is not already in the chain, add them at the end **ONLY IF** they are not the applying employee
+   - If MD is already in the chain (from step 2), skip to avoid duplicates
    - **MD always comes last** in the final chain
+
+5. **Self-Approval Prevention** (CRITICAL)
+   - At every step, the system checks if the person being added is the same as the applying employee
+   - This ensures that no employee can approve their own leave
+   - Examples:
+     - MD applying for leave: MD is excluded from chain, goes to HR Manager only
+     - HR Manager applying: HR Manager excluded, goes to MD only
+     - Regular employee: No self-approval possible
 
 ### Safety Features
 
 - **Circular Reference Protection**: Uses a `visited` set to detect circular reports_to chains
 - **Maximum Iteration Limit**: Maximum 20 levels to prevent infinite loops
 - **Missing User ID Handling**: Skips employees without `user_id` and continues up the chain
+- **Self-Approval Prevention**: Excludes applying employee from approval chain at all stages
 - **Detailed Logging**: Comprehensive error logs for debugging
+
 
 ## Examples
 
@@ -80,7 +92,47 @@ Managing Director
 
 ---
 
-### Example 3: Employee with No reports_to
+### Example 3: Managing Director Applies for Leave
+
+**Employee Structure**:
+```
+MD (John - user: john@company.com)
+  ↓ reports_to: None
+```
+
+**Approval Chain**:
+1. reports_to chain: Empty
+2. HR Manager check: alice@company.com (not in chain, not same as applicant)
+   - Add HR Manager: alice@company.com ✓
+3. MD check: john@company.com - **SKIPPED** (same as applying employee)
+
+**Result**: `HR Manager` (1 approver)
+
+> **Self-Approval Prevention**: MD is excluded from their own approval chain.
+
+---
+
+### Example 4: HR Manager Applies for Leave
+
+**Employee Structure**:
+```
+HR Manager (Alice - user: alice@company.com)
+  ↓ reports_to: MD (John - john@company.com)
+```
+
+**Approval Chain**:
+1. reports_to: MD (john@company.com) - Add ✓
+2. MD has no reports_to
+3. HR Manager check: alice@company.com - **SKIPPED** (same as applying employee)
+4. MD check: Already in chain
+
+**Result**: `MD` (1 approver)
+
+> **Self-Approval Prevention**: HR Manager is excluded from their own approval chain.
+
+---
+
+### Example 5: Employee with No reports_to
 
 **Employee Structure**:
 ```
