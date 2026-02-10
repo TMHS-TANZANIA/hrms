@@ -1507,123 +1507,125 @@ def get_leave_approver(employee):
 
 
 def get_leave_approval_chain(employee):
-	"""Get the approval chain for an employee - ORIGINAL CONFIGURATION RESTORED"""
+	"""
+	Get the approval chain for an employee based on reports_to hierarchy.
+	
+	Logic:
+	1. Follow reports_to chain upward from employee until no more reports_to exists
+	2. Add HR Manager if not already present (no duplicates)
+	3. Add MD at the end if not already present (no duplicates)
+	4. MD always comes last
+	
+	Returns:
+		list: List of user IDs representing the approval chain
+	
+	Examples:
+		Employee → Manager B → Manager C (no more reports_to)
+		+ HR Manager (not in chain) + MD (not in chain)
+		= Employee → B → C → HR Manager → MD
+	"""
 	try:
-		employee_doc = frappe.get_doc("Employee", employee)
 		approval_chain = []
-
-		frappe.log_error(f"Getting approval chain for employee {employee} in department {employee_doc.department}", "Approval Chain Debug")
-
-		# Check department to determine approval chain
-		department = employee_doc.department or ""
-
-		if department.lower() == "HR & Administration":
-			# HR Employee: HR Manager → MD (2 levels)
-			hr_manager = get_hr_manager()
-			md = get_managing_director()
-
-			if hr_manager:
-				approval_chain.append(hr_manager)
-				frappe.log_error(f"HR Employee - Level 1 HR Manager: {hr_manager}", "Approval Chain Debug")
-			if md and md not in approval_chain:
-				approval_chain.append(md)
-				frappe.log_error(f"HR Employee - Level 2 MD: {md}", "Approval Chain Debug")
-
-		elif is_hr_manager(employee):
-			# HR Manager: MD only (1 level)
-			md = get_managing_director()
-			if md:
-				approval_chain.append(md)
-				frappe.log_error(f"HR Manager - MD only: {md}", "Approval Chain Debug")
-
-		elif is_manager(employee):
-			# Manager: HR Manager → MD (2 levels)
-			hr_manager = get_hr_manager()
-			md = get_managing_director()
-
-			if hr_manager:
-				approval_chain.append(hr_manager)
-				frappe.log_error(f"Manager - Level 1 HR Manager: {hr_manager}", "Approval Chain Debug")
-			if md and md not in approval_chain:
-				approval_chain.append(md)
-				frappe.log_error(f"Manager - Level 2 MD: {md}", "Approval Chain Debug")
-
-
-		else:
-			# Other Department Employee: Department Manager → HR Manager → MD (3 levels)
-			# Level 1: Direct Manager (leave_approver)
-			if employee_doc.leave_approver:
-				approval_chain.append(employee_doc.leave_approver)
-				frappe.log_error(f"Other Dept - Level 1 Department Manager: {employee_doc.leave_approver}", "Approval Chain Debug")
+		visited = set()  # Prevent circular references
+		
+		# Step 1: Follow reports_to chain upward
+		current_employee = employee
+		max_iterations = 20  # Safety limit to prevent infinite loops
+		iteration_count = 0
+		
+		frappe.log_error(f"Starting approval chain for employee {employee}", "Approval Chain Debug")
+		
+		while current_employee and iteration_count < max_iterations:
+			iteration_count += 1
+			
+			# Prevent circular references
+			if current_employee in visited:
+				frappe.log_error(
+					f"Circular reference detected in reports_to chain for employee {employee}",
+					"Approval Chain Circular Reference"
+				)
+				break
+			visited.add(current_employee)
+			
+			# Get the employee's reports_to
+			employee_doc = frappe.get_doc("Employee", current_employee)
+			reports_to = employee_doc.reports_to
+			
+			frappe.log_error(
+				f"Iteration {iteration_count}: Employee {current_employee} reports_to: {reports_to}",
+				"Approval Chain Debug"
+			)
+			
+			# If there's a reports_to, get their user_id and add to chain
+			if reports_to:
+				# Get user_id of the person they report to
+				reports_to_user = frappe.db.get_value("Employee", reports_to, "user_id")
+				
+				if reports_to_user:
+					approval_chain.append(reports_to_user)
+					frappe.log_error(
+						f"Added {reports_to_user} (from employee {reports_to}) to approval chain",
+						"Approval Chain Debug"
+					)
+				else:
+					frappe.log_error(
+						f"Warning: Employee {reports_to} has no user_id, skipping",
+						"Approval Chain Warning"
+					)
+				
+				# Move up the chain
+				current_employee = reports_to
 			else:
-				approval_chain.append(employee_doc.reports_to)
-				frappe.log_error(f"Other Dept - Level 1 Department Manager: {employee_doc.manager}", "Approval Chain Debug")
-
-			# Level 2: HR Manager
-			hr_manager = get_hr_manager()
-			if hr_manager and hr_manager not in approval_chain:
-				approval_chain.append(hr_manager)
-				frappe.log_error(f"Other Dept - Level 2 HR Manager: {hr_manager}", "Approval Chain Debug")
-
-			# Level 3: Managing Director
-			md = get_managing_director()
-			if md and md not in approval_chain:
-				approval_chain.append(md)
-				frappe.log_error(f"Other Dept - Level 3 MD: {md}", "Approval Chain Debug")
-
-		frappe.log_error(f"Final approval chain for {employee} ({department}): {approval_chain}", "Approval Chain Debug")
+				# No more reports_to, exit loop
+				frappe.log_error(
+					f"Reached top of chain at employee {current_employee} (no more reports_to)",
+					"Approval Chain Debug"
+				)
+				break
+		
+		# Step 2: Add HR Manager if not already in chain
+		hr_manager = get_hr_manager()
+		if hr_manager and hr_manager not in approval_chain:
+			approval_chain.append(hr_manager)
+			frappe.log_error(
+				f"Added HR Manager {hr_manager} to approval chain (not already present)",
+				"Approval Chain Debug"
+			)
+		elif hr_manager and hr_manager in approval_chain:
+			frappe.log_error(
+				f"HR Manager {hr_manager} already in chain at position {approval_chain.index(hr_manager) + 1}, not adding duplicate",
+				"Approval Chain Debug"
+			)
+		
+		# Step 3: Add MD at the end if not already in chain
+		md = get_managing_director()
+		if md and md not in approval_chain:
+			approval_chain.append(md)
+			frappe.log_error(
+				f"Added MD {md} to approval chain (not already present)",
+				"Approval Chain Debug"
+			)
+		elif md and md in approval_chain:
+			frappe.log_error(
+				f"MD {md} already in chain at position {approval_chain.index(md) + 1}, not adding duplicate",
+				"Approval Chain Debug"
+			)
+		
+		frappe.log_error(
+			f"Final approval chain for employee {employee}: {approval_chain} (total {len(approval_chain)} approvers)",
+			"Approval Chain Final"
+		)
+		
 		return approval_chain
-
+		
 	except Exception as e:
-		frappe.log_error(f"Error getting approval chain for employee {employee}: {str(e)}", "Approval Chain Error")
+		frappe.log_error(
+			f"Error getting approval chain for employee {employee}: {str(e)}",
+			"Approval Chain Error"
+		)
 		return []
 
-def is_hr_manager(employee):
-	"""Check if employee is HR Manager"""
-	try:
-		employee_doc = frappe.get_doc("Employee", employee)
-		user_id = employee_doc.user_id
 
-		if not user_id:
-			return False
-
-		# Check if user has HR Manager role
-		has_role = frappe.db.exists("Has Role", {
-			"parent": user_id,
-			"role": "HR Manager"
-		})
-
-		return True if has_role else False
-	except Exception as e:
-		frappe.log_error(f"Error checking if employee {employee} is HR Manager: {str(e)}", "HR Manager Check Error")
-		return False
-
-def is_manager(employee):
-	"""Check if employee is a Manager (but not HR Manager)"""
-	try:
-		# First check if they're HR Manager - if so, don't treat as regular manager
-		if is_hr_manager(employee):
-			return False
-
-		employee_doc = frappe.get_doc("Employee", employee)
-		user_id = employee_doc.user_id
-
-		if not user_id:
-			return False
-
-		# Check if user has Manager role
-		has_role = frappe.db.exists("Has Role", {
-			"parent": user_id,
-			"role": "Department Manager"
-		})
-
-		if has_role:
-			return True
-
-		return False
-	except Exception as e:
-		frappe.log_error(f"Error checking if employee {employee} is Manager: {str(e)}", "Manager Check Error")
-		return False
 
 def get_hr_manager():
 	"""Get HR Manager user"""
@@ -1708,7 +1710,7 @@ def fix_document_approval_chain(name):
 
 @frappe.whitelist()
 def approve_reject(doc, action):
-	"""Exact copy of Material Request approve_reject logic"""
+
 	doc = frappe.get_doc("Leave Application", doc)
 	if doc.docstatus != 1:
 		frappe.msgprint(
@@ -1812,87 +1814,135 @@ def approve_reject(doc, action):
 			indicator="Red",
 		)
 
-@frappe.whitelist()
-def reject_application(name, reason, comments=None):
-	"""Simple rejection logic exactly like Material Request"""
-	doc = frappe.get_doc("Leave Application", name)
+# @frappe.whitelist()
+# def reject_application(name, reason, comments=None):
+# 	"""Simple rejection logic exactly like Material Request"""
+# 	doc = frappe.get_doc("Leave Application", name)
 
-	# Check if document is submitted (like Material Request)
-	if doc.docstatus != 1:
-		frappe.msgprint(
-			_("Leave application must be submitted before rejection"),
-			alert=True,
-			indicator="Red",
-		)
-		return
+# 	# Check if document is submitted (like Material Request)
+# 	if doc.docstatus != 1:
+# 		frappe.msgprint(
+# 			_("Leave application must be submitted before rejection"),
+# 			alert=True,
+# 			indicator="Red",
+# 		)
+# 		return
 
-	# Check if already processed
-	if doc.status in ["Rejected", "Approved"]:
-		frappe.msgprint(
-			_("No Action Needed"),
-			alert=True,
-			indicator="Yellow",
-		)
-		return
+# 	# Check if already processed
+# 	if doc.status in ["Rejected", "Approved"]:
+# 		frappe.msgprint(
+# 			_("No Action Needed"),
+# 			alert=True,
+# 			indicator="Yellow",
+# 		)
+# 		return
 
-	# Simple rejection logic like Material Request
-	user_found = False
-	for approver in doc.approval_chain:
-		if approver.approver == frappe.session.user and approver.status == "Pending":
-			user_found = True
-			# Reject this user
-			approver.status = "Rejected"
-			approver.approval_date = frappe.utils.now()
-			if comments:
-				approver.comments = comments
+# 	# Simple rejection logic like Material Request
+# 	user_found = False
+# 	for approver in doc.approval_chain:
+# 		if approver.approver == frappe.session.user and approver.status == "Pending":
+# 			user_found = True
+# 			# Reject this user
+# 			approver.status = "Rejected"
+# 			approver.approval_date = frappe.utils.now()
+# 			if comments:
+# 				approver.comments = comments
 
-			# Add to activity timeline
-			doc.add_comment(
-				comment_type="Comment",
-				text=f"Rejected by {frappe.session.user}" + (f": {reason}" if reason else "") + (f" - {comments}" if comments else ""),
-				comment_by=frappe.session.user
-			)
+# 			# Add to activity timeline
+# 			doc.add_comment(
+# 				comment_type="Comment",
+# 				text=f"Rejected by {frappe.session.user}" + (f": {reason}" if reason else "") + (f" - {comments}" if comments else ""),
+# 				comment_by=frappe.session.user
+# 			)
 
-			# Save the rejection
-			doc.save()
-			frappe.db.commit()
-			frappe.msgprint(
-				_("Leave application has been rejected"),
-				alert=True,
-				indicator="Red",
-			)
-			break
+# 			# Save the rejection
+# 			doc.save()
+# 			frappe.db.commit()
+# 			frappe.msgprint(
+# 				_("Leave application has been rejected"),
+# 				alert=True,
+# 				indicator="Red",
+# 			)
+# 			break
 
-	if not user_found:
-		frappe.msgprint(
-			_("You're not allowed to perform this action. If you think this is a mistake, send an email to IT for further assistance."),
-			alert=True,
-			indicator="Red",
-		)
-		return
+# 	if not user_found:
+# 		frappe.msgprint(
+# 			_("You're not allowed to perform this action. If you think this is a mistake, send an email to IT for further assistance."),
+# 			alert=True,
+# 			indicator="Red",
+# 		)
+# 		return
 
-	# Update the status field using db_set (like Material Request)
-	approved = sum(1 for a in doc.approval_chain if a.status == "Approved")
-	rejected = sum(1 for a in doc.approval_chain if a.status == "Rejected")
+# 	# Update the status field using db_set (like Material Request)
+# 	approved = sum(1 for a in doc.approval_chain if a.status == "Approved")
+# 	rejected = sum(1 for a in doc.approval_chain if a.status == "Rejected")
 
-	if approved == len(doc.approval_chain):
-		doc.db_set("status", "Approved")
-		doc.db_set("current_approver", None)  # No more approvers
-	elif rejected > 0:
-		doc.db_set("status", "Rejected")
-		doc.db_set("current_approver", None)  # No more approvers needed
-	else:
-		doc.db_set("status", "Pending Approval")
-		# Set next approver as current approver
-		next_approver = None
-		for approver in doc.approval_chain:
-			if approver.status == "Pending":
-				next_approver = approver.approver
-				break
-		if next_approver:
-			doc.db_set("current_approver", next_approver)
-			doc.db_set("leave_approver", next_approver)  # Update the field shown in form
-			frappe.log_error(f"Next approver set to: {next_approver}", "Approval Chain Update")
+# 	if approved == len(doc.approval_chain):
+# 		doc.db_set("status", "Approved")
+# 		doc.db_set("current_approver", None)  # No more approvers
+# 	elif rejected > 0:
+# 		doc.db_set("status", "Rejected")
+# 		doc.db_set("current_approver", None)  # No more approvers needed
+# 	else:
+# 		doc.db_set("status", "Pending Approval")
+# 		# Set next approver as current approver
+# 		next_approver = None
+# 		for approver in doc.approval_chain:
+# 			if approver.status == "Pending":
+# 				next_approver = approver.approver
+# 				break
+# 		if next_approver:
+# 			doc.db_set("current_approver", next_approver)
+# 			doc.db_set("leave_approver", next_approver)  # Update the field shown in form
+# 			frappe.log_error(f"Next approver set to: {next_approver}", "Approval Chain Update")
 
-def on_doctype_update():
-	frappe.db.add_index("Leave Application", ["employee", "from_date", "to_date"])
+
+# 	@frappe.whitelist()
+# 	def approve_application(name, comments=None):
+# 		"""Wrapper to approve a Leave Application from client-side calls.
+
+# 		Uses existing `approve_reject` logic for submitted documents.
+# 		"""
+# 		try:
+# 			doc = frappe.get_doc("Leave Application", name)
+# 		except Exception:
+# 			frappe.msgprint(_("Leave Application not found"), alert=True, indicator="Red")
+# 			return
+
+# 		if doc.docstatus != 1:
+# 			frappe.msgprint(
+# 				_("Leave application must be submitted before approval"),
+# 				alert=True,
+# 				indicator="Red",
+# 			)
+# 			return
+
+# 		# Delegate to existing approve_reject logic
+# 		return approve_reject(name, "1")
+
+# def on_doctype_update():
+# 	frappe.db.add_index("Leave Application", ["employee", "from_date", "to_date"])
+
+
+def get_indicator(doc):
+	"""Return a colored indicator for list and form views based on `status`.
+
+	Frappe will use this to render the status badge in the list view and the
+	document header. Returns a tuple: `(label, color, filter)` where `color`
+	is a CSS class name understood by Frappe (green, orange, red, blue, grey).
+	"""
+	status = (doc.get("status") or "").strip()
+
+	if status == "Approved":
+		return ("Approved", "green", "status,=,Approved")
+	if status == "Pending Approval":
+		return ("Pending Approval", "orange", "status,=,Pending Approval")
+	if status == "Open":
+		return ("Open", "blue", "status,=,Open")
+	if status == "Rejected":
+		return ("Rejected", "red", "status,=,Rejected")
+	if status == "Cancelled":
+		return ("Cancelled", "grey", "status,=,Cancelled")
+
+	# Fallback - neutral/black
+	return (status or "", "black", f"status,=,{status}")

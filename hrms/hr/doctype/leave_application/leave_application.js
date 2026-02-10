@@ -118,12 +118,6 @@ frappe.ui.form.on("Leave Application", {
 		frm.trigger("ensure_approval_chain");
 
 	
-		// Show approve/reject buttons for current approver (Material Request style)
-		console.log("Debug - Session User:", frappe.session.user);
-		console.log("Debug - Status:", frm.doc.status);
-		console.log("Debug - Docstatus:", frm.doc.docstatus);
-		console.log("Debug - Approvers:", frm.doc.approvers);
-		
 		// Check if current user is in the approvers table and has New status (Material Request style)
 		let is_current_approver = false;
 		if (frm.doc.approvers && frm.doc.approvers.length > 0) {
@@ -134,75 +128,8 @@ frappe.ui.form.on("Leave Application", {
 				}
 			}
 		}
-		
-		if (frm.doc.docstatus === 0 && is_current_approver && 
-			(frm.doc.status === "Open" || frm.doc.status === "Pending Approval" || frm.doc.status === "Applied")) {
-			
-			frm.add_custom_button(__("Approve"), function () {
-				frappe.prompt(
-					[
-						{
-							fieldname: "comments",
-							fieldtype: "Small Text",
-							label: __("Comments (Optional)"),
-							reqd: 0,
-						},
-					],
-					function (values) {
-						frappe.call({
-							method: "hrms.hr.doctype.leave_application.leave_application.approve_application",
-							args: {
-								name: frm.doc.name,
-								comments: values.comments,
-							},
-							callback: function (r) {
-								if (!r.exc) {
-									frm.reload_doc();
-								}
-							},
-						});
-					},
-					__("Approve Leave Application"),
-					__("Approve")
-				);
-			}, "Actions");
 
-			frm.add_custom_button(__("Reject"), function () {
-				frappe.prompt(
-					[
-						{
-							fieldname: "reason",
-							fieldtype: "Small Text",
-							label: __("Reason for Rejection"),
-							reqd: 1,
-						},
-						{
-							fieldname: "comments",
-							fieldtype: "Small Text",
-							label: __("Additional Comments (Optional)"),
-							reqd: 0,
-						},
-					],
-					function (values) {
-						frappe.call({
-							method: "hrms.hr.doctype.leave_application.leave_application.reject_application",
-							args: {
-								name: frm.doc.name,
-								reason: values.reason,
-								comments: values.comments,
-							},
-							callback: function (r) {
-								if (!r.exc) {
-									frm.reload_doc();
-								}
-							},
-						});
-					},
-					__("Reject Leave Application"),
-					__("Reject")
-				);
-			}, "Actions");
-		}
+		frm.trigger("ensure_approval_chain");
 	},
 
 	handle_submit_button: function (frm) {
@@ -294,13 +221,14 @@ frappe.ui.form.on("Leave Application", {
 		
 		// Material Request style approval - only for submitted documents
 		if (frm.doc.docstatus === 1 && is_current_approver && frm.doc.status === "Pending Approval") {
-			
+
+			// Top-level Approve button (Material Request style)
 			frm.add_custom_button(__("Approve"), function () {
 				frappe.call({
 					method: "hrms.hr.doctype.leave_application.leave_application.approve_reject",
 					args: {
 						doc: frm.doc.name,
-						action: "1"  // 1 = Approve, 0 = Reject
+						action: "1"  // 1 = Approve
 					},
 					callback: function (r) {
 						if (!r.exc) {
@@ -308,14 +236,15 @@ frappe.ui.form.on("Leave Application", {
 						}
 					},
 				});
-			}, "Actions");
+			});
 
+			// Top-level Reject button (Material Request style)
 			frm.add_custom_button(__("Reject"), function () {
 				frappe.call({
 					method: "hrms.hr.doctype.leave_application.leave_application.approve_reject",
 					args: {
 						doc: frm.doc.name,
-						action: "0"  // 1 = Approve, 0 = Reject
+						action: "0"  // 0 = Reject
 					},
 					callback: function (r) {
 						if (!r.exc) {
@@ -323,7 +252,7 @@ frappe.ui.form.on("Leave Application", {
 						}
 					},
 				});
-			}, "Actions");
+			});
 		}
 	},
 

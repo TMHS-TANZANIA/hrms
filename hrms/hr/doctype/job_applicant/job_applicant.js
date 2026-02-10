@@ -28,6 +28,19 @@ frappe.ui.form.on("Job Applicant", {
 				},
 				__("Create"),
 			);
+
+			// Add Certificate button - allows adding academic/other certificates
+			frm.add_custom_button(
+				__("Add Certificate"),
+				function () {
+					if (frm.doc.__islocal) {
+						frappe.msgprint(__("Please save the record before adding certificates."));
+						return;
+					}
+					frm.events.create_certificate_dialog(frm);
+				},
+				__("Create"),
+			);
 		}
 
 		if (!frm.doc.__islocal && frm.doc.status == "Accepted") {
@@ -113,5 +126,46 @@ frappe.ui.form.on("Job Applicant", {
 				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
 			},
 		});
+	},
+
+	create_certificate_dialog: function (frm) {
+		let d = new frappe.ui.Dialog({
+			title: "Add Certificate",
+			fields: [
+				{
+					label: "Certificate Type",
+					fieldname: "certificate_type",
+					fieldtype: "Select",
+					options: "Form Four\nForm Six\nBasic Certificate\nDiploma\nBachelor\nMaster\nOther",
+				},
+				{
+					label: "Certificate File",
+					fieldname: "certificate",
+					fieldtype: "Attach",
+				},
+				{
+					label: "Remarks",
+					fieldname: "remarks",
+					fieldtype: "Data",
+				},
+			],
+			primary_action_label: __("Add Certificate"),
+			primary_action(values) {
+				frm.events.create_certificate(frm, values);
+				d.hide();
+			},
+		});
+		d.show();
+	},
+
+	create_certificate: function (frm, values) {
+		var row = frm.add_child("certificates");
+		row.certificate_type = values.certificate_type;
+		row.remarks = values.remarks;
+		if (values.certificate) {
+			row.certificate = values.certificate;
+		}
+		frm.refresh_field("certificates");
+		frm.save();
 	},
 });

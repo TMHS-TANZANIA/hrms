@@ -29,6 +29,7 @@
   "notes",
   "cover_letter",
   "resume_attachment",
+  "certificates",
   "resume_link",
   "section_break_16",
   "currency",
@@ -102,6 +103,13 @@
    "fieldname": "resume_attachment",
    "fieldtype": "Attach",
    "label": "Resume Attachment"
+  },
+  {
+   "fieldname": "certificates",
+   "fieldtype": "Table",
+   "label": "Certificates",
+   "options": "Applicant Certificate",
+   "in_web_form": 1
   },
   {
    "fieldname": "notes",
