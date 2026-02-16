@@ -1737,7 +1737,7 @@ def fix_document_approval_chain(name):
 		return f"Error: {str(e)}"
 
 @frappe.whitelist()
-def approve_reject(doc, action):
+def approve_reject(doc, action, reason=None):
 
 	doc = frappe.get_doc("Leave Application", doc)
 	if doc.docstatus != 1:
@@ -1779,6 +1779,9 @@ def approve_reject(doc, action):
 					approver.status = "Approved"
 				else:
 					approver.status = "Rejected"
+					if reason:
+						approver.rejection_reason = reason
+						doc.rejection_reason = reason
 				doc.save()
 				frappe.db.commit()
 				frappe.msgprint(
@@ -1813,6 +1816,13 @@ def approve_reject(doc, action):
 			doc.db_set("leave_approver", None)  # No more approvers
 			doc.save()
 			frappe.db.commit()
+			
+			# Trigger rejection notification
+			try:
+				notify_rejection(doc)
+				frappe.log_error(f"Rejection notification sent for {doc.name}", "Rejection Notification")
+			except Exception as e:
+				frappe.log_error(f"Error sending rejection notification: {str(e)}", "Rejection Notification Error")
 		else:
 			# Still pending - set next approver for email notifications
 			next_approver = None
@@ -1951,6 +1961,79 @@ def approve_reject(doc, action):
 # def on_doctype_update():
 # 	frappe.db.add_index("Leave Application", ["employee", "from_date", "to_date"])
 
+
+def notify_rejection(doc):
+	"""Send a well-designed email and in-app notification when a leave is rejected"""
+	employee_email = get_employee_email(doc.employee)
+	if not employee_email:
+		return
+
+	subject = _("Leave Application Rejected: {0}").format(doc.name)
+	
+	# HTML Email Template
+	message = f"""
+	<div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+		<div style="background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%); padding: 30px; text-align: center; color: white;">
+			<h2 style="margin: 0; font-size: 24px; font-weight: 700;">Leave Application Update</h2>
+			<p style="margin: 10px 0 0 0; opacity: 0.9;">Status: <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-weight: 600;">REJECTED</span></p>
+		</div>
+		
+		<div style="padding: 30px; background: white;">
+			<p style="font-size: 16px; color: #424242; margin-bottom: 25px;">Hello <strong>{doc.employee_name}</strong>,</p>
+			
+			<p style="font-size: 15px; line-height: 1.6; color: #616161;">We regret to inform you that your leave application <strong>{doc.name}</strong> has been rejected.</p>
+			
+			<div style="background: #fff8f8; border-left: 4px solid #ff4b2b; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+				<h4 style="margin: 0 0 10px 0; color: #d32f2f; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Rejection Reason</h4>
+				<p style="margin: 0; font-size: 16px; color: #424242; font-style: italic;">"{doc.rejection_reason or 'No reason provided.'}"</p>
+			</div>
+			
+			<table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 14px;">
+				<tr>
+					<td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #757575;">Leave Type</td>
+					<td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: right; color: #212121; font-weight: 600;">{doc.leave_type}</td>
+				</tr>
+				<tr>
+					<td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #757575;">Period</td>
+					<td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: right; color: #212121; font-weight: 600;">{formatdate(doc.from_date)} to {formatdate(doc.to_date)}</td>
+				</tr>
+				<tr>
+					<td style="padding: 10px 0; color: #757575;">Total Days</td>
+					<td style="padding: 10px 0; text-align: right; color: #212121; font-weight: 600;">{doc.total_leave_days}</td>
+				</tr>
+			</table>
+			
+			<div style="text-align: center; margin-top: 35px;">
+				<a href="{frappe.utils.get_url_to_form('Leave Application', doc.name)}" style="background: #212121; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; transition: background 0.3s;">View Application</a>
+			</div>
+		</div>
+		
+		<div style="background: #f9f9f9; padding: 20px; text-align: center; color: #9e9e9e; font-size: 12px; border-top: 1px solid #f0f0f0;">
+			This is an automated notification from the HR Management System.
+		</div>
+	</div>
+	"""
+
+	# Send Email
+	frappe.sendmail(
+		recipients=employee_email,
+		subject=subject,
+		message=message,
+		now=True
+	)
+
+	# In-app Notification
+	frappe.publish_realtime(
+		"msgprint",
+		{
+			"message": _("Your Leave Application {0} has been Rejected. Reason: {1}").format(
+				frappe.bold(doc.name), frappe.bold(doc.rejection_reason)
+			),
+			"indicator": "red",
+			"title": _("Leave Rejected")
+		},
+		user=frappe.db.get_value("Employee", doc.employee, "user_id")
+	)
 
 def get_indicator(doc):
 	"""Return a colored indicator for list and form views based on `status`.

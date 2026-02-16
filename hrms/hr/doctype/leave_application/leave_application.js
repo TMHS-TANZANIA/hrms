@@ -240,18 +240,28 @@ frappe.ui.form.on("Leave Application", {
 
 			// Top-level Reject button (Material Request style)
 			frm.add_custom_button(__("Reject"), function () {
-				frappe.call({
-					method: "hrms.hr.doctype.leave_application.leave_application.approve_reject",
-					args: {
-						doc: frm.doc.name,
-						action: "0"  // 0 = Reject
-					},
-					callback: function (r) {
-						if (!r.exc) {
-							frm.reload_doc();
-						}
-					},
-				});
+				frappe.prompt([
+					{
+						label: __("Reason for Rejection"),
+						fieldname: "rejection_reason",
+						fieldtype: "Small Text",
+						reqd: 1
+					}
+				], (values) => {
+					frappe.call({
+						method: "hrms.hr.doctype.leave_application.leave_application.approve_reject",
+						args: {
+							doc: frm.doc.name,
+							action: "0",  // 0 = Reject
+							reason: values.rejection_reason
+						},
+						callback: function (r) {
+							if (!r.exc) {
+								frm.reload_doc();
+							}
+						},
+					});
+				}, __("Enter Rejection Reason"), __("Reject"));
 			});
 		}
 	},
