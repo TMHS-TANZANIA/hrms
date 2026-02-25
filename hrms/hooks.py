@@ -367,4 +367,5 @@ company_data_to_be_ignored = [
 fixtures = [
 	"Salary Component",
 	"Salary Structure",
+	"Workspace"
 ]

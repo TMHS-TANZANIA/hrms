@@ -75,7 +75,7 @@
    "in_list_view": 1,
    "label": "Time",
    "permlevel": 1,
-   "read_only_depends_on": "eval:doc.attendance;",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -185,7 +185,7 @@
   }
  ],
  "links": [],
- "modified": "2025-07-09 10:47:34.591144",
+ "modified": "2026-01-17 16:49:53.326844",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Checkin",
@@ -193,41 +193,14 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
-   "import": 1,
+   "permlevel": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "import": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "import": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR User",
    "share": 1,
    "write": 1
   },
@@ -239,14 +212,46 @@
    "write": 1
   },
   {
+   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
-   "permlevel": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Employee"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
    "share": 1,
    "write": 1
   },
@@ -273,11 +278,6 @@
    "role": "HR User",
    "share": 1,
    "write": 1
-  },
-  {
-   "permlevel": 1,
-   "read": 1,
-   "role": "Employee"
   }
  ],
  "row_format": "Dynamic",

@@ -1,0 +1,82 @@
+{
+ "app": "hrms",
+ "charts": [
+  {
+   "chart_name": "Leave Trends(Quarterly)",
+   "label": "Quarterly Leave Trends"
+  },
+  {
+   "chart_name": "Job Application Status",
+   "label": "Job Application Status"
+  }
+ ],
+ "content": "[{\"id\":\"L-sPIJCMIp\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Employees</b></span>\",\"col\":12}},{\"id\":\"3VsgsSVAa3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total New Employee This Year\",\"col\":4}},{\"id\":\"8RU4nh4XKe\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Active Employees\",\"col\":4}},{\"id\":\"wp-HsSDexD\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Employee Exists This Year\",\"col\":4}},{\"id\":\"73P-LeGSoQ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Recruitment</b></span>\",\"col\":12}},{\"id\":\"vLgF_OhWoK\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Current Job Openings\",\"col\":4}},{\"id\":\"N3V5a8kVX3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Accepted Job Applicants\",\"col\":4}},{\"id\":\"D_FYf3x8hh\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Job Offer Acceptance Rate\",\"col\":4}},{\"id\":\"Sv7-jIjMBU\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Leaves</b></span>\",\"col\":12}},{\"id\":\"-mLmNY0Bzj\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Approved Leave Application\",\"col\":4}},{\"id\":\"mocK7zE4af\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Approval Leave Application\",\"col\":4}},{\"id\":\"HS3OmGm8LZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Rejected Leaves\",\"col\":4}},{\"id\":\"phgkiFy_mD\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Job Application Status\",\"col\":12}},{\"id\":\"302F10FD1m\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Quarterly Leave Trends\",\"col\":12}}]",
+ "creation": "2026-01-03 12:48:12.274167",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "hr",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "HRM",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-01-03 17:51:31.912898",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "HRM",
+ "number_cards": [
+  {
+   "label": "Total New Employee This Year",
+   "number_card_name": "New Hires (This Year)"
+  },
+  {
+   "label": "Current Job Openings",
+   "number_card_name": "Job Openings"
+  },
+  {
+   "label": "Approved Leave Application",
+   "number_card_name": "Approved Leave Application"
+  },
+  {
+   "label": "Total Active Employees",
+   "number_card_name": "Total Employees"
+  },
+  {
+   "label": "Total Accepted Job Applicants",
+   "number_card_name": "Accepted Job Applicants"
+  },
+  {
+   "label": "Pending Approval Leave Application",
+   "number_card_name": "Pending Approval Leave Application"
+  },
+  {
+   "label": "Total Employee Exists This Year",
+   "number_card_name": "Employee Exits (This Year)"
+  },
+  {
+   "label": "Job Offer Acceptance Rate",
+   "number_card_name": "Job Offer Acceptance Rate"
+  },
+  {
+   "label": "Rejected Leaves",
+   "number_card_name": "Rejected Leaves"
+  }
+ ],
+ "owner": "system@tmhstz.com",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR Manager"
+  }
+ ],
+ "sequence_id": 34.0,
+ "shortcuts": [],
+ "title": "HRM",
+ "type": "Workspace"
+}
