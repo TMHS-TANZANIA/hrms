@@ -51,6 +51,9 @@
   "column_break_xdzn",
   "delivery_trip",
   "vehicle_log",
+  "approvers_tab",
+  "approvers",
+  "respect_approver_order",
   "dashboard_tab"
  ],
  "fields": [
@@ -109,6 +112,7 @@
    "default": "Draft",
    "fieldname": "approval_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Approval Status",
    "no_copy": 1,
    "options": "Draft\nApproved\nRejected",
@@ -268,7 +272,7 @@
    "in_list_view": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Draft\nPaid\nUnpaid\nRejected\nSubmitted\nCancelled",
+   "options": "Draft\nPaid\nUnpaid\nRejected\nSubmitted\nCancelled\nPending\nApproved",
    "print_hide": 1,
    "read_only": 1
   },
@@ -365,6 +369,25 @@
    "fieldname": "more_info_tab",
    "fieldtype": "Tab Break",
    "label": "More Info"
+  },
+  {
+   "fieldname": "approvers_tab",
+   "fieldtype": "Tab Break",
+   "label": "Approver(s)"
+  },
+  {
+   "fieldname": "approvers",
+   "fieldtype": "Table",
+   "label": "Approver(s)",
+   "no_copy": 1,
+   "options": "Expense Claim Approver",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "respect_approver_order",
+   "fieldtype": "Check",
+   "label": "Respect Approval Order"
   },
   {
    "fieldname": "dashboard_tab",

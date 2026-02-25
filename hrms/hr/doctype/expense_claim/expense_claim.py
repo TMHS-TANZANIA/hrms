@@ -55,6 +55,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.validate_advances()
 		self.set_expense_account(validate=True)
 		self.calculate_taxes()
+		self.validate_manager_has_not_been_removed()
 		self.set_status()
 		self.validate_company_and_department()
 		if self.task and not self.project:
@@ -83,8 +84,12 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 					status = "Paid"
 				elif flt(self.total_sanctioned_amount) > 0:
 					status = "Unpaid"
+				else:
+					status = "Approved"
 			elif self.approval_status == "Rejected":
 				status = "Rejected"
+			else:
+				status = "Pending"
 
 		if update:
 			self.db_set("status", status)
@@ -115,7 +120,13 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			frappe.throw(_("Self-approval for Expense Claims is not allowed"))
 
 	def on_update(self):
-		share_doc_with_approver(self, self.expense_approver)
+		if self.expense_approver:
+			share_doc_with_approver(self, self.expense_approver)
+
+		for approver in self.approvers:
+			if approver.approver:
+				share_doc_with_approver(self, approver.approver)
+
 		self.publish_update()
 		self.notify_approval_status()
 
@@ -134,15 +145,14 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		hrms.refetch_resource("hrms:team_claims")
 
 	def on_submit(self):
-		if self.approval_status == "Draft":
-			frappe.throw(_("""Approval Status must be 'Approved' or 'Rejected'"""))
-
 		self.update_task_and_project()
 		self.make_gl_entries()
+		self.send_for_approval()
 
 		update_reimbursed_amount(self)
 
 		self.update_claimed_amount_in_employee_advance()
+		self.set_status(update=True)
 
 	def on_update_after_submit(self):
 		if self.check_if_fields_updated([], {"taxes": ("account_head",), "expenses": ()}):
@@ -163,6 +173,85 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def update_claimed_amount_in_employee_advance(self):
 		for d in self.get("advances"):
 			frappe.get_doc("Employee Advance", d.employee_advance).update_claimed_amount()
+
+	def validate_manager_has_not_been_removed(self):
+		# Remove empty rows
+		approvers = [row for row in self.approvers if row.approver]
+
+		# Identify the requester's manager
+		manager_user_account = get_manager_for_proposal_approval(self.employee)
+
+		if manager_user_account:
+			found_the_manager = False
+			for approver in approvers:
+				if approver.approver == manager_user_account:
+					found_the_manager = True
+					break
+
+			if not found_the_manager:
+				approvers.append(frappe._dict({"approver": manager_user_account, "status": "New"}))
+				frappe.msgprint(_("You can't remove your manager"), alert=True)
+
+		self.set("approvers", approvers)
+
+		if len(self.approvers) < 2:
+			frappe.throw(_("Please add at least two approvers."))
+
+	def get_pending_approvers(self):
+		"""Get list of approvers with 'New' status"""
+		pending_approvers = []
+		for approver in self.approvers:
+			if approver.status == "New":
+				pending_approvers.append(approver.approver)
+		return pending_approvers
+
+	def send_for_approval(self):
+		from frappe.utils import get_url
+
+		doc = self
+		approver_emails = []
+
+		for row in doc.approvers:
+			if row.status == "New" and row.approver:
+				email = frappe.db.get_value("User", row.approver, "email")
+				if email:
+					approver_emails.append(email)
+
+		if not approver_emails:
+			return
+
+		doc_url = get_url(f"/app/expense-claim/{doc.name}")
+		subject = f"Approval Required: Expense Claim {doc.name} - {doc.employee_name}"
+
+		message = f"""
+			<p>Hello,</p>
+			<p>
+				The Expense Claim <b>{doc.name}</b> for <b>{doc.employee_name}</b> has been submitted and requires your review.
+			</p>
+			<p>
+				<a href="{doc_url}"
+				style="
+						background-color:#1f8ceb;
+						color:#ffffff;
+						padding:10px 16px;
+						text-decoration:none;
+						border-radius:4px;
+						display:inline-block;
+				">
+					Review Expense Claim
+				</a>
+			</p>
+			<p>Thank you.</p>
+		"""
+
+		frappe.sendmail(
+			recipients=approver_emails,
+			subject=subject,
+			message=message,
+			reference_doctype=doc.doctype,
+			reference_name=doc.name,
+			now=True,
+		)
 
 	def update_task_and_project(self):
 		if self.task:
@@ -419,19 +508,18 @@ def get_total_reimbursed_amount(doc):
 		return doc.grand_total
 	else:
 		JournalEntryAccount = frappe.qb.DocType("Journal Entry Account")
-		amount_via_jv = frappe.db.get_value(
-			"Journal Entry Account",
-			{"reference_name": doc.name, "docstatus": 1},
-			Sum(
-				JournalEntryAccount.debit_in_account_currency - JournalEntryAccount.credit_in_account_currency
-			),
-		)
+		amount_via_jv = (
+			frappe.qb.from_(JournalEntryAccount)
+			.select(Sum(JournalEntryAccount.debit_in_account_currency - JournalEntryAccount.credit_in_account_currency))
+			.where((JournalEntryAccount.reference_name == doc.name) & (JournalEntryAccount.docstatus == 1))
+		).run()[0][0] or 0
 
-		amount_via_payment_entry = frappe.db.get_value(
-			"Payment Entry Reference",
-			{"reference_name": doc.name, "docstatus": 1},
-			[{"SUM": "allocated_amount"}],
-		)
+		PaymentEntryReference = frappe.qb.DocType("Payment Entry Reference")
+		amount_via_payment_entry = (
+			frappe.qb.from_(PaymentEntryReference)
+			.select(Sum(PaymentEntryReference.allocated_amount))
+			.where((PaymentEntryReference.reference_name == doc.name) & (PaymentEntryReference.docstatus == 1))
+		).run()[0][0] or 0
 
 		return flt(amount_via_jv) + flt(amount_via_payment_entry)
 
@@ -639,6 +727,82 @@ def make_expense_claim_for_delivery_trip(source_name, target_doc=None):
 	)
 
 	return doc
+
+
+@frappe.whitelist()
+def approve_reject(doc, action):
+	doc = frappe.get_doc("Expense Claim", doc)
+	if doc.docstatus != 1:
+		frappe.msgprint(_("Expense Claim must be submitted before approval"), alert=True, indicator="Red")
+		return
+
+	if doc.status in ["Rejected", "Approved"]:
+		frappe.msgprint(_("No Action Needed"), alert=True, indicator="Yellow")
+		return
+
+	try:
+		user_found = False
+		for approver in doc.approvers:
+			if approver.approver == frappe.session.user and approver.status == "New":
+				user_found = True
+				i = doc.approvers.index(approver)
+				for approver_ in doc.approvers:
+					j = doc.approvers.index(approver_)
+					if approver_.status == "New" and i > j and doc.respect_approver_order:
+						frappe.msgprint(
+							_("Please wait for " + approver_.approver + " to complete their approval process"),
+							alert=True,
+							indicator="Red",
+						)
+						return
+				if str(action) == "1":
+					approver.status = "Approved"
+				else:
+					approver.status = "Rejected"
+				doc.save()
+				frappe.db.commit()
+				frappe.msgprint(
+					_("Expense Claim has been Approved" if str(action) == "1" else "Expense Claim has been Rejected"),
+					alert=True,
+					indicator="Green" if str(action) == "1" else "red",
+				)
+				break
+		if not user_found:
+			frappe.msgprint(
+				_(
+					"You're not allowed to perform this action. If you think this is a mistake, send an email to IT for further assistance."
+				),
+				alert=True,
+				indicator="Red",
+			)
+			return
+
+		# Update the status field
+		approved = sum(1 for a in doc.approvers if a.status == "Approved")
+		rejected = sum(1 for a in doc.approvers if a.status == "Rejected")
+
+		if approved == len(doc.approvers):
+			doc.db_set("approval_status", "Approved")
+			doc.set_status(update=True)
+			doc.save()
+			frappe.db.commit()
+		elif rejected > 0:
+			doc.db_set("approval_status", "Rejected")
+			doc.set_status(update=True)
+			doc.save()
+			frappe.db.commit()
+
+	except Exception as _e:
+		_approve_reject = "Approve" if str(action) == "1" else "Reject"
+		frappe.msgprint(_("Failed to {0}. Try again. Error: {1}").format(_approve_reject, _e), alert=True)
+
+
+@frappe.whitelist()
+def get_manager_for_proposal_approval(employee):
+	manager_employee_record = frappe.get_value("Employee", employee, "reports_to")
+	if not manager_employee_record:
+		return None
+	return frappe.get_value("Employee", manager_employee_record, "user_id")
 
 
 @frappe.whitelist()

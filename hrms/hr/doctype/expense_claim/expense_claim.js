@@ -78,17 +78,7 @@ frappe.ui.form.on("Expense Claim", {
 		erpnext.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
 
 		if (frm.doc.docstatus == 0) {
-			return frappe.call({
-				method: "hrms.hr.doctype.leave_application.leave_application.get_mandatory_approval",
-				args: {
-					doctype: frm.doc.doctype,
-				},
-				callback: function (r) {
-					if (!r.exc && r.message) {
-						frm.toggle_reqd("expense_approver", true);
-					}
-				},
-			});
+			frm.events.fetch_manager_for_approval(frm);
 		}
 	},
 
@@ -98,6 +88,7 @@ frappe.ui.form.on("Expense Claim", {
 
 		if (
 			frm.doc.docstatus === 1 &&
+			frm.doc.approval_status === "Approved" &&
 			frm.doc.status !== "Paid" &&
 			frappe.model.can_create("Payment Entry")
 		) {
@@ -109,6 +100,7 @@ frappe.ui.form.on("Expense Claim", {
 				__("Create"),
 			);
 		}
+		frm.trigger("make_custom_buttons");
 		frm.trigger("set_form_buttons");
 	},
 
@@ -266,6 +258,7 @@ frappe.ui.form.on("Expense Claim", {
 
 	employee: function (frm) {
 		frm.events.get_advances(frm);
+		frm.events.fetch_manager_for_approval(frm);
 	},
 
 	cost_center: function (frm) {
@@ -352,6 +345,87 @@ frappe.ui.form.on("Expense Claim", {
 			frm.save();
 		});
 		$(".form-message").prop("hidden", true);
+	},
+	fetch_manager_for_approval: function (frm) {
+		if (frm.doc.docstatus != 0 || !frm.doc.employee) return;
+		frappe.call({
+			method: "hrms.hr.doctype.expense_claim.expense_claim.get_manager_for_proposal_approval",
+			args: { employee: frm.doc.employee },
+			callback: function (r) {
+				if (!r.message) return;
+				const manager = r.message;
+				
+				// Remove empty rows correctly
+				for (let i = (frm.doc.approvers || []).length - 1; i >= 0; i--) {
+					if (!frm.doc.approvers[i].approver) {
+						frm.doc.approvers.splice(i, 1);
+					}
+				}
+
+				const exists = (frm.doc.approvers || []).some(
+					row => row.approver === manager
+				);
+				if (!exists) {
+					frm.add_child("approvers", {
+						approver: manager,
+						status: "New"
+					});
+				}
+				frm.refresh_field("approvers");
+			},
+		});
+	},
+	make_custom_buttons: function (frm) {
+		if (frm.doc.docstatus == 1 && frm.doc.approval_status != "Rejected" && frm.doc.approval_status != "Approved") {
+			let current_user_is_approver = false;
+			for (let i = 0; i < frm.doc.approvers.length; i++) {
+				const approver = frm.doc.approvers[i];
+				if (approver.approver == frappe.session.user && approver.status == "New") {
+					current_user_is_approver = true;
+					break;
+				}
+			}
+			let has_approver_role = frappe.user.has_role("Expense Approver") || frappe.user.has_role("HR Manager");
+
+			if (has_approver_role && current_user_is_approver) {
+				frm.add_custom_button('Approve', () => frm.events.approve_request(frm)).addClass('btn-primary');
+				frm.add_custom_button('Reject', () => frm.events.reject_request(frm)).addClass('btn-primary');
+			}
+		}
+	},
+	approve_request: function (frm) {
+		frappe.call({
+			method: "hrms.hr.doctype.expense_claim.expense_claim.approve_reject",
+			args: { doc: frm.doc.name, action: 1 },
+			callback: function (r) {
+				frm.reload_doc();
+			}
+		});
+	},
+	reject_request: function (frm) {
+		frappe.call({
+			method: "hrms.hr.doctype.expense_claim.expense_claim.approve_reject",
+			args: { doc: frm.doc.name, action: 0 },
+			callback: function (r) {
+				frm.reload_doc();
+			}
+		});
+	},
+	before_save: function (frm) {
+		// Clean up empty rows before saving
+		if (frm.doc.approvers) {
+			for (let i = frm.doc.approvers.length - 1; i >= 0; i--) {
+				if (!frm.doc.approvers[i].approver) {
+					frm.doc.approvers.splice(i, 1);
+				}
+			}
+			frm.refresh_field("approvers");
+		}
+		
+		if ((frm.doc.approvers || []).length < 2) {
+			frappe.msgprint(__("Please add at least two approvers before saving."));
+			frappe.validated = false;
+		}
 	},
 });
 
