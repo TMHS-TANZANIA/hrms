@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
-from frappe.utils import flt, validate_email_address
+from frappe.utils import flt, formatdate, get_url_to_form, validate_email_address
 
 from hrms.hr.doctype.interview.interview import get_interviewers
 
@@ -116,3 +116,165 @@ def get_applicant_to_hire_percentage():
 		"value": flt(total_hired) / flt(total_applicants) * 100 if total_applicants else 0,
 		"fieldtype": "Percent",
 	}
+
+
+@frappe.whitelist()
+def send_shortlist_emails(
+	applicant_names,
+	interview_date,
+	interview_time=None,
+	interview_round=None,
+	interview_location=None,
+	custom_message=None,
+):
+	"""
+	Send interview shortlist/invitation emails to a list of Job Applicants.
+	Updates each applicant's status to 'Replied' on success.
+
+	Returns a dict: { sent: int, failed: int, errors: list[str] }
+	"""
+	import json
+
+	if isinstance(applicant_names, str):
+		applicant_names = json.loads(applicant_names)
+
+	sent = 0
+	failed = 0
+	errors = []
+
+	# Format the interview date nicely
+	formatted_date = formatdate(interview_date)
+	time_str = f" at {interview_time}" if interview_time else ""
+	location_str = interview_location or "To be communicated"
+	round_str = interview_round or "Interview"
+	custom_block = (
+		f"""
+		<tr>
+			<td style="padding:10px 0;border-bottom:1px solid #f0f0f0;color:#757575;">Additional Note</td>
+			<td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:right;color:#212121;font-style:italic;">
+				{frappe.utils.escape_html(custom_message)}
+			</td>
+		</tr>
+		"""
+		if custom_message
+		else ""
+	)
+
+	for applicant_name in applicant_names:
+		try:
+			applicant = frappe.db.get_value(
+				"Job Applicant",
+				applicant_name,
+				["applicant_name", "email_id", "job_title"],
+				as_dict=True,
+			)
+
+			if not applicant or not applicant.email_id:
+				failed += 1
+				errors.append(f"{applicant_name}: No email address found")
+				continue
+
+			job_opening_name = applicant.job_title
+			if job_opening_name:
+				job_title = frappe.db.get_value("Job Opening", job_opening_name, "job_title") or job_opening_name
+			else:
+				job_title = "the position"
+
+			subject = _("Congratulations! You've Been Shortlisted for an Interview — {0}").format(
+				job_title
+			)
+
+			logo_url = frappe.utils.get_url("/files/TMHS-GROUP-LOGO(1)d4a401ec2fbf56a77d.jpg")
+
+			message = f"""
+<div style="font-family:'Inter',Arial,sans-serif;max-width:620px;margin:auto;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+
+	<!-- Logo Header -->
+	<div style="background:white;padding:24px 30px;text-align:center;">
+		<img src="{logo_url}" alt="TMHS GROUP" style="max-height:60px;width:auto;display:block;margin:0 auto;">
+	</div>
+
+	<!-- Header -->
+	<div style="background:linear-gradient(135deg,#1a73e8 0%,#0d47a1 100%);padding:36px 30px;text-align:center;color:white;">
+		<h2 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Interview Invitation</h2>
+		<p style="margin:10px 0 0 0;opacity:0.9;font-size:15px;">
+			You have been shortlisted for <strong>{frappe.utils.escape_html(job_title)}</strong>
+		</p>
+	</div>
+
+	<!-- Body -->
+	<div style="padding:32px 30px;background:white;">
+		<p style="font-size:16px;color:#212121;margin-bottom:20px;">
+			Dear <strong>{frappe.utils.escape_html(applicant.applicant_name)}</strong>,
+		</p>
+		<p style="font-size:15px;line-height:1.7;color:#616161;">
+			We are pleased to inform you that after reviewing your application, you have been shortlisted
+			for an interview for the position of <strong>{frappe.utils.escape_html(job_title)}</strong>.
+		</p>
+
+		<!-- Details Table -->
+		<div style="background:#f8f9fa;border-radius:10px;padding:20px;margin:24px 0;">
+			<h4 style="margin:0 0 16px 0;color:#1a73e8;font-size:13px;text-transform:uppercase;letter-spacing:1px;">
+				Interview Details
+			</h4>
+			<table style="width:100%;border-collapse:collapse;font-size:14px;">
+				<tr>
+					<td style="padding:10px 0;border-bottom:1px solid #e9ecef;color:#757575;">Interview Round</td>
+					<td style="padding:10px 0;border-bottom:1px solid #e9ecef;text-align:right;color:#212121;font-weight:600;">
+						{frappe.utils.escape_html(round_str)}
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:10px 0;border-bottom:1px solid #e9ecef;color:#757575;">Date &amp; Time</td>
+					<td style="padding:10px 0;border-bottom:1px solid #e9ecef;text-align:right;color:#212121;font-weight:600;">
+						{formatted_date}{time_str}
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:10px 0;border-bottom:1px solid #e9ecef;color:#757575;">Venue / Location</td>
+					<td style="padding:10px 0;border-bottom:1px solid #e9ecef;text-align:right;color:#212121;font-weight:600;">
+						{frappe.utils.escape_html(location_str)}
+					</td>
+				</tr>
+				{custom_block}
+			</table>
+		</div>
+
+		<p style="font-size:14px;color:#616161;line-height:1.7;">
+			Please confirm your availability by replying to this email.
+			If you are unable to attend at the scheduled time, kindly let us know as soon as possible
+			so we can make alternative arrangements.
+		</p>
+	</div>
+
+	<!-- Footer -->
+	<div style="background:#f8f9fa;padding:20px 30px;text-align:center;color:#9e9e9e;font-size:12px;border-top:1px solid #f0f0f0;">
+		This is an automated message from the HR Management System. Please do not reply directly to this email.
+	</div>
+</div>
+"""
+
+			frappe.sendmail(
+				recipients=[applicant.email_id],
+				subject=subject,
+				message=message,
+				now=True,
+			)
+
+			# Mark applicant as Replied
+			frappe.db.set_value("Job Applicant", applicant_name, "status", "Replied")
+			sent += 1
+
+		except Exception as e:
+			failed += 1
+			errors.append(f"{applicant_name}: {str(e)}")
+			frappe.log_error(
+				f"Failed to send shortlist email to {applicant_name}: {str(e)}",
+				"Shortlist Email Error",
+			)
+
+	if sent:
+		frappe.db.commit()
+
+	return {"sent": sent, "failed": failed, "errors": errors}
+
