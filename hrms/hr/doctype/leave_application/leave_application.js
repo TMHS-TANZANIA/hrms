@@ -117,7 +117,7 @@ frappe.ui.form.on("Leave Application", {
 		frm.trigger("handle_submit_button");
 		frm.trigger("ensure_approval_chain");
 
-	
+
 		// Check if current user is in the approvers table and has New status (Material Request style)
 		let is_current_approver = false;
 		if (frm.doc.approvers && frm.doc.approvers.length > 0) {
@@ -140,9 +140,6 @@ frappe.ui.form.on("Leave Application", {
 				if (frappe.session.user !== r.user_id) {
 					// Hide submit button for approvers
 					frm.page.clear_primary_action();
-					console.log("Debug - Submit button hidden for approver:", frappe.session.user);
-				} else {
-					console.log("Debug - Submit button kept for applicant:", frappe.session.user);
 				}
 			});
 		}
@@ -168,14 +165,14 @@ frappe.ui.form.on("Leave Application", {
 			});
 		}
 		*/
-		
+
 		// Also trigger button setup after a short delay to ensure approval chain is loaded
-		setTimeout(function() {
+		setTimeout(function () {
 			frm.trigger("setup_approval_buttons");
-		}, 1000);
-		
+		}, 300);
+
 	},
-	
+
 	setup_approval_buttons: function (frm) {
 		// Add refresh approvers button for testing
 		if (frm.doc.employee && frm.doc.docstatus === 0) {
@@ -183,10 +180,10 @@ frappe.ui.form.on("Leave Application", {
 				frm.trigger("populate_approvers");
 			}, __("Actions"));
 		}
-		
+
 		// Don't clear custom buttons to preserve debug buttons
 		// frm.page.clear_custom_actions();
-		
+
 		// Check if current user is in the approvers table and has New status (Material Request style)
 		let is_current_approver = false;
 		if (frm.doc.approvers && frm.doc.approvers.length > 0) {
@@ -211,14 +208,7 @@ frappe.ui.form.on("Leave Application", {
 				}
 			}
 		}
-		
-		console.log("Debug - Is Current Approver:", is_current_approver);
-		console.log("Debug - Status:", frm.doc.status);
-		console.log("Debug - Docstatus:", frm.doc.docstatus);
-		console.log("Debug - Session User:", frappe.session.user);
-		console.log("Debug - Approvers Table:", frm.doc.approvers);
-		console.log("Debug - Respect Approver Order:", frm.doc.respect_approver_order);
-		
+
 		// Material Request style approval - only for submitted documents
 		if (frm.doc.docstatus === 1 && is_current_approver && frm.doc.status === "Pending Approval") {
 
@@ -276,14 +266,9 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	employee: function (frm) {
-		console.log(`Employee changed to: ${frm.doc.employee}`);
-		frm.trigger("make_dashboard");
-		frm.trigger("get_leave_balance");
-		frm.trigger("set_leave_approver");
-		frm.trigger("populate_approvers");
 	},
 
-	populate_approvers: function(frm) {
+	populate_approvers: function (frm) {
 		// Auto-populate approvers when employee is selected - ALWAYS update when employee changes
 		if (frm.doc.employee) {
 			// Call the backend to populate approvers based on employee's approval chain
@@ -292,33 +277,30 @@ frappe.ui.form.on("Leave Application", {
 				args: {
 					employee: frm.doc.employee
 				},
-				callback: function(r) {
+				callback: function (r) {
 					if (r.message && r.message.approvers) {
 						// Always clear existing approvers and repopulate (for employee changes)
 						frm.clear_table("approvers");
-						
+
 						// Add approvers from the approval chain
-						r.message.approvers.forEach(function(approver) {
+						r.message.approvers.forEach(function (approver) {
 							frm.add_child("approvers", {
 								approver: approver,
 								status: "New"
 							});
 						});
-						
+
 						// Set respect_approver_order to checked
 						frm.set_value("respect_approver_order", 1);
-						
+
 						// Set leave_approver to first approver for email notifications
 						if (r.message.approvers.length > 0) {
 							frm.set_value("leave_approver", r.message.approvers[0]);
-							console.log(`Set leave_approver to first approver: ${r.message.approvers[0]}`);
 						}
-						
+
 						frm.refresh_field("approvers");
 						frm.refresh_field("respect_approver_order");
 						frm.refresh_field("leave_approver");
-						
-						console.log(`Approvers updated for employee ${frm.doc.employee}:`, r.message.approvers);
 					}
 				}
 			});
