@@ -1,0 +1,221 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:device_id",
+ "creation": "2026-04-23 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "device_details_section",
+  "device_id",
+  "platform",
+  "device_model",
+  "device_manufacturer",
+  "column_break_1",
+  "os_version",
+  "app_version",
+  "ip_address",
+  "employee_section",
+  "employee",
+  "user",
+  "column_break_2",
+  "is_active",
+  "registration_date",
+  "last_login",
+  "push_notifications_section",
+  "fcm_token",
+  "admin_section",
+  "notes",
+  "analytics_section",
+  "total_logins",
+  "last_checkin_time",
+  "column_break_3",
+  "last_checkin_location",
+  "screen_resolution"
+ ],
+ "fields": [
+  {
+   "fieldname": "device_details_section",
+   "fieldtype": "Section Break",
+   "label": "Device Details"
+  },
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Device ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "platform",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Platform",
+   "options": "\nAndroid\niOS"
+  },
+  {
+   "fieldname": "device_model",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Device Model"
+  },
+  {
+   "fieldname": "device_manufacturer",
+   "fieldtype": "Data",
+   "label": "Device Manufacturer"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "os_version",
+   "fieldtype": "Data",
+   "label": "OS Version"
+  },
+  {
+   "fieldname": "app_version",
+   "fieldtype": "Data",
+   "label": "App Version"
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address"
+  },
+  {
+   "fieldname": "employee_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Binding"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "default": "1",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "registration_date",
+   "fieldtype": "Datetime",
+   "label": "Registration Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_login",
+   "fieldtype": "Datetime",
+   "label": "Last Login",
+   "read_only": 1
+  },
+  {
+   "fieldname": "push_notifications_section",
+   "fieldtype": "Section Break",
+   "label": "Push Notifications",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "fcm_token",
+   "fieldtype": "Small Text",
+   "label": "FCM Token"
+  },
+  {
+   "fieldname": "admin_section",
+   "fieldtype": "Section Break",
+   "label": "Admin Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "analytics_section",
+   "fieldtype": "Section Break",
+   "label": "Analytics & Tracking",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "total_logins",
+   "fieldtype": "Int",
+   "label": "Total Logins",
+   "read_only": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "last_checkin_time",
+   "fieldtype": "Datetime",
+   "label": "Last Check-in Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_checkin_location",
+   "fieldtype": "Data",
+   "label": "Last Check-in Location",
+   "read_only": 1
+  },
+  {
+   "fieldname": "screen_resolution",
+   "fieldtype": "Data",
+   "label": "Screen Resolution"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-04-23 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Mobile Device",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "Employee",
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "device_model",
+ "track_changes": 1
+}

@@ -22,15 +22,17 @@
   "source_and_rating_section",
   "source",
   "source_name",
-  "employee_referral",
   "column_break_13",
   "applicant_rating",
+  "employee_referral",
   "section_break_6",
-  "notes",
   "cover_letter",
+  "column_break_gzoc",
+  "notes",
   "resume_attachment",
-  "certificates",
   "resume_link",
+  "certificate_and_certifications_section",
+  "certificates",
   "section_break_16",
   "currency",
   "column_break_18",
@@ -97,19 +99,21 @@
   {
    "fieldname": "cover_letter",
    "fieldtype": "Text",
-   "label": "Cover Letter"
+   "label": "Cover Letter",
+   "reqd": 1
   },
   {
    "fieldname": "resume_attachment",
    "fieldtype": "Attach",
-   "label": "Resume Attachment"
+   "label": "Resume Attachment",
+   "reqd": 1
   },
   {
    "fieldname": "certificates",
    "fieldtype": "Table",
    "label": "Certificates",
    "options": "Applicant Certificate",
-   "in_web_form": 1
+   "reqd": 1
   },
   {
    "fieldname": "notes",
@@ -121,13 +125,15 @@
    "fieldname": "phone_number",
    "fieldtype": "Data",
    "label": "Phone Number",
-   "options": "Phone"
+   "options": "Phone",
+   "reqd": 1
   },
   {
    "fieldname": "country",
    "fieldtype": "Link",
    "label": "Country",
-   "options": "Country"
+   "options": "Country",
+   "reqd": 1
   },
   {
    "fieldname": "resume_link",
@@ -197,13 +203,23 @@
    "fieldtype": "Link",
    "label": "Designation",
    "options": "Designation"
+  },
+  {
+   "fieldname": "column_break_gzoc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Hint! Click the Add Row to add your certificate, choose the certificate type like Form Four Certificate then click attach to attach your certificate if you have any clarification that we should know kindly add them on Remarks field.",
+   "fieldname": "certificate_and_certifications_section",
+   "fieldtype": "Section Break",
+   "label": "Certificate and Certifications"
   }
  ],
  "icon": "fa fa-user",
  "idx": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-16 13:06:05.312255",
+ "modified": "2026-04-18 12:30:30.638930",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Job Applicant",
@@ -220,10 +236,24 @@
    "role": "HR User",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "applicant_name, email_id, job_title, phone_number",
  "sender_field": "email_id",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "ASC",
  "states": [],

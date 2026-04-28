@@ -808,3 +808,364 @@ def get_allowed_states_for_workflow(workflow: dict, user_id: str) -> list[str]:
 @frappe.whitelist()
 def get_permitted_fields_for_write(doctype: str) -> list[str]:
 	return get_permitted_fields(doctype, permission_type="write")
+
+
+# ── Mobile App API Endpoints ──
+
+@frappe.whitelist()
+def get_employee_details() -> dict:
+	"""
+	Returns employee details for the currently logged-in user.
+	Called after successful login from the mobile app.
+	"""
+	current_user = frappe.session.user
+
+	if current_user == "Guest":
+		frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+
+	employee = frappe.db.get_value(
+		"Employee",
+		{"user_id": current_user, "status": "Active"},
+		[
+			"name",
+			"first_name",
+			"last_name",
+			"middle_name",
+			"employee_name",
+			"cell_number",
+			"status",
+			"branch",
+			"designation",
+			"department",
+			"company",
+			"user_id",
+			"image",
+		],
+		as_dict=True,
+	)
+
+	if not employee:
+		frappe.throw(
+			_("No active employee record found for user {0}. Contact your HR administrator.").format(
+				current_user
+			)
+		)
+
+	return {
+		"first_name": employee.first_name or "",
+		"last_name": employee.last_name or "",
+		"middle_name": employee.middle_name or "",
+		"employee_number": employee.name,
+		"employee_phone": employee.cell_number or "",
+		"employee_state": employee.status or "",
+		"branch": employee.branch or "",
+		"designation": employee.designation or "",
+		"department": employee.department or "",
+		"company": employee.company or "",
+		"user_id": employee.user_id or "",
+		"image": employee.image or "",
+	}
+
+
+@frappe.whitelist()
+def verify_device(
+	device_id: str,
+	device_model: str | None = None,
+	os_version: str | None = None,
+	platform: str | None = None,
+	app_version: str | None = None,
+	device_manufacturer: str | None = None,
+) -> dict:
+	"""
+	Verifies and registers a mobile device for the currently logged-in employee.
+
+	Rules:
+	- Each employee can only have ONE active device at a time.
+	- If the device_id already exists and is active for this employee → allow login.
+	- If the device_id exists but is bound to a different employee → reject.
+	- If the employee has no device registered → register this device.
+	- If the employee has a different active device → reject (admin must revoke first).
+	"""
+	from frappe.utils import now_datetime
+
+	current_user = frappe.session.user
+	if current_user == "Guest":
+		frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+
+	# Get the employee for current user
+	employee_id = frappe.db.get_value(
+		"Employee",
+		{"user_id": current_user, "status": "Active"},
+		"name",
+	)
+
+	if not employee_id:
+		frappe.throw(
+			_("No active employee record found for user {0}.").format(current_user)
+		)
+
+	# Check if this device_id is already registered
+	existing_device = frappe.db.get_value(
+		"Mobile Device",
+		{"device_id": device_id},
+		["name", "employee", "is_active", "user"],
+		as_dict=True,
+	)
+
+	if existing_device:
+		if existing_device.employee == employee_id and existing_device.is_active:
+			# Same employee, same device, active → allow, update stats
+			device_doc = frappe.get_doc("Mobile Device", existing_device.name)
+			device_doc.os_version = os_version or device_doc.os_version
+			device_doc.app_version = app_version or device_doc.app_version
+			device_doc.ip_address = frappe.local.request_ip
+			device_doc.update_login_stats()
+			return {"status": "ok", "message": _("Device verified successfully.")}
+
+		elif existing_device.employee == employee_id and not existing_device.is_active:
+			# Device was deactivated by admin for this employee
+			frappe.throw(
+				_(
+					"This device has been deactivated by your administrator. "
+					"Please contact HR to re-activate it."
+				)
+			)
+
+		else:
+			# Device belongs to a different employee
+			frappe.throw(
+				_(
+					"This device is already registered to another employee. "
+					"A device can only be used by one employee at a time. "
+					"Contact your HR administrator."
+				)
+			)
+
+	# Check if this employee already has an active device (different from this one)
+	employee_active_device = frappe.db.get_value(
+		"Mobile Device",
+		{"employee": employee_id, "is_active": 1},
+		"device_id",
+	)
+
+	if employee_active_device and employee_active_device != device_id:
+		frappe.throw(
+			_(
+				"Your account is already bound to another device (ID: {0}). "
+				"Only one device is allowed per employee. "
+				"Contact your HR administrator to revoke the previous device."
+			).format(employee_active_device[:8] + "...")
+		)
+
+	# No existing device → register this device
+	device_doc = frappe.get_doc(
+		{
+			"doctype": "Mobile Device",
+			"device_id": device_id,
+			"employee": employee_id,
+			"user": current_user,
+			"device_model": device_model or "",
+			"device_manufacturer": device_manufacturer or "",
+			"os_version": os_version or "",
+			"app_version": app_version or "",
+			"platform": platform or "",
+			"ip_address": frappe.local.request_ip,
+			"is_active": 1,
+			"registration_date": now_datetime(),
+			"last_login": now_datetime(),
+			"total_logins": 1,
+		}
+	)
+	device_doc.insert(ignore_permissions=True)
+	frappe.db.commit()
+
+	return {"status": "ok", "message": _("Device registered and verified successfully.")}
+
+
+@frappe.whitelist()
+def mobile_checkin(
+	device_id: str,
+	latitude: float | str,
+	longitude: float | str,
+	log_type: str = "IN",
+) -> dict:
+	"""
+	Performs an Employee Check-in from the mobile app with full validation.
+
+	Validations:
+	1. User must have an active employee record
+	2. Device must be registered and active for this employee
+	3. Employee's branch must have a location configured
+	4. User's GPS coordinates must be within the branch geofence polygon
+	5. No duplicate check-in/out on the same day
+
+	Args:
+		device_id: The unique device identifier
+		latitude: GPS latitude
+		longitude: GPS longitude
+		log_type: "IN" for check-in, "OUT" for check-out
+	"""
+	import json as json_module
+
+	from frappe.utils import now_datetime, today
+
+	current_user = frappe.session.user
+	if current_user == "Guest":
+		frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+
+	latitude = float(latitude)
+	longitude = float(longitude)
+
+	# 1. Get employee
+	employee = frappe.db.get_value(
+		"Employee",
+		{"user_id": current_user, "status": "Active"},
+		["name", "branch", "employee_name"],
+		as_dict=True,
+	)
+
+	if not employee:
+		frappe.throw(_("No active employee record found."))
+
+	# 2. Verify device binding
+	device = frappe.db.get_value(
+		"Mobile Device",
+		{"device_id": device_id, "employee": employee.name, "is_active": 1},
+		"name",
+	)
+
+	if not device:
+		frappe.throw(
+			_(
+				"Device not registered or has been deactivated. "
+				"Contact your HR administrator."
+			)
+		)
+
+	# 3. Check for duplicate check-in/out today
+	existing_checkin = frappe.db.exists(
+		"Employee Checkin",
+		{
+			"employee": employee.name,
+			"log_type": log_type,
+			"time": ("between", [today() + " 00:00:00", today() + " 23:59:59"]),
+		},
+	)
+
+	if existing_checkin:
+		action_label = _("checked in") if log_type == "IN" else _("checked out")
+		frappe.throw(
+			_("You have already {0} today. You can only check in/out once per day.").format(
+				action_label
+			)
+		)
+
+	# 4. Validate branch geofence
+	if not employee.branch:
+		frappe.throw(
+			_("No branch assigned to your employee record. Contact HR administrator.")
+		)
+
+	branch_location = frappe.db.get_value("Branch", employee.branch, "location")
+
+	if not branch_location:
+		frappe.throw(
+			_("Branch {0} does not have a location configured. Contact admin.").format(
+				employee.branch
+			)
+		)
+
+	# Parse GeoJSON and check if point is inside polygon
+	if not _is_inside_geofence(branch_location, latitude, longitude):
+		frappe.throw(
+			_(
+				"You are not within the {0} premises. "
+				"Please move closer to your branch location to check in/out."
+			).format(employee.branch)
+		)
+
+	# 5. Create the Employee Checkin record
+	checkin = frappe.get_doc(
+		{
+			"doctype": "Employee Checkin",
+			"employee": employee.name,
+			"log_type": log_type,
+			"time": now_datetime(),
+			"device_id": device_id,
+			"latitude": latitude,
+			"longitude": longitude,
+		}
+	)
+	checkin.insert(ignore_permissions=True)
+	frappe.db.commit()
+
+	# Update device analytics
+	device_doc = frappe.get_doc("Mobile Device", device)
+	device_doc.update_checkin_stats(location_label=employee.branch)
+
+	action_label = _("Check-in") if log_type == "IN" else _("Check-out")
+	return {
+		"status": "ok",
+		"message": _("{0} recorded successfully at {1}.").format(
+			action_label, employee.branch
+		),
+		"checkin_name": checkin.name,
+		"time": str(checkin.time),
+	}
+
+
+def _is_inside_geofence(location_json: str, latitude: float, longitude: float) -> bool:
+	"""
+	Check if a GPS point is inside the branch geofence polygon.
+
+	The branch location is stored as a GeoJSON FeatureCollection with a
+	LineString geometry (Frappe's geolocation field format).
+	We treat the LineString as a closed polygon.
+	"""
+	import json as json_module
+	import math
+
+	try:
+		geo = json_module.loads(location_json)
+		features = geo.get("features", [])
+		if not features:
+			return False
+
+		geometry = features[0].get("geometry", {})
+		coordinates = geometry.get("coordinates", [])
+
+		if not coordinates or len(coordinates) < 3:
+			return False
+
+		# Build polygon points: GeoJSON is [lng, lat], we need (lat, lng) for calculations
+		polygon = [(coord[1], coord[0]) for coord in coordinates]
+
+		# Ensure polygon is closed
+		if polygon[0] != polygon[-1]:
+			polygon.append(polygon[0])
+
+		# Ray casting algorithm for point-in-polygon
+		return _point_in_polygon(latitude, longitude, polygon)
+
+	except Exception as e:
+		frappe.log_error(f"Geofence parsing error: {e}", "Mobile Checkin Geofence")
+		return False
+
+
+def _point_in_polygon(lat: float, lng: float, polygon: list) -> bool:
+	"""
+	Ray casting algorithm to determine if a point is inside a polygon.
+	"""
+	n = len(polygon)
+	inside = False
+
+	j = n - 1
+	for i in range(n):
+		xi, yi = polygon[i]
+		xj, yj = polygon[j]
+
+		if ((yi > lng) != (yj > lng)) and (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi):
+			inside = not inside
+		j = i
+
+	return inside
