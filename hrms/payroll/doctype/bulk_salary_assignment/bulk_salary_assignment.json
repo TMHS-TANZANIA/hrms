@@ -1,11 +1,14 @@
 {
  "actions": [],
  "allow_copy": 1,
+ "allow_rename": 1,
+ "autoname": "field:title",
  "creation": "2025-12-18 18:20:29.645717",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "set_assignment_details_section",
+  "title",
   "salary_structure",
   "from_date",
   "income_tax_slab",
@@ -23,7 +26,7 @@
   "advanced_filters_section",
   "filter_list",
   "select_employees_section",
-  "employees_html",
+  "employees",
   "amended_from"
  ],
  "fields": [
@@ -51,6 +54,7 @@
    "depends_on": "salary_structure",
    "fieldname": "income_tax_slab",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Income Tax Slab",
    "options": "Income Tax Slab"
   },
@@ -140,9 +144,10 @@
    "label": "Select Employees"
   },
   {
-   "fieldname": "employees_html",
-   "fieldtype": "HTML",
-   "label": "Employees HTML"
+   "fieldname": "employees",
+   "fieldtype": "Table",
+   "label": "Employees",
+   "options": "Bulk Salary Assignment Employee"
   },
   {
    "fieldname": "amended_from",
@@ -153,17 +158,37 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "unique": 1
   }
  ],
  "hide_toolbar": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-18 18:20:29.645717",
- "modified_by": "james@example.com",
+ "modified": "2026-04-30 12:20:07.896457",
+ "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",
+ "naming_rule": "By fieldname",
  "owner": "james@example.com",
  "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "email": 1,
@@ -174,8 +199,11 @@
    "write": 1
   }
  ],
+ "protect_attached_files": 1,
  "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }

@@ -1,13 +1,15 @@
 {
  "actions": [],
  "allow_copy": 1,
- "autoname": "HR-PRUN-.YYYY.-.#####",
+ "allow_rename": 1,
+ "autoname": "HR-PRUN-.YYYY.-.##",
  "creation": "2017-10-23 15:22:29.291323",
  "doctype": "DocType",
  "document_type": "Other",
  "engine": "InnoDB",
  "field_order": [
   "select_payroll_period",
+  "title",
   "posting_date",
   "company",
   "column_break_5",
@@ -19,10 +21,10 @@
   "salary_slip_based_on_timesheet",
   "payroll_frequency",
   "start_date",
-  "end_date",
   "column_break_13",
   "deduct_tax_for_unclaimed_employee_benefits",
   "deduct_tax_for_unsubmitted_tax_exemption_proof",
+  "end_date",
   "employees_tab",
   "section_break_17",
   "branch",
@@ -122,6 +124,7 @@
    "default": "0",
    "fieldname": "salary_slip_based_on_timesheet",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Salary Slip Based on Timesheet"
   },
   {
@@ -145,12 +148,14 @@
    "default": "0",
    "fieldname": "deduct_tax_for_unclaimed_employee_benefits",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Deduct Tax For Unclaimed Employee Benefits"
   },
   {
    "default": "0",
    "fieldname": "deduct_tax_for_unsubmitted_tax_exemption_proof",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Deduct Tax For Unsubmitted Tax Exemption Proof"
   },
   {
@@ -337,6 +342,12 @@
    "fieldtype": "Select",
    "label": "Overtime Slip Step",
    "options": "\nCreate\nSubmit"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1
   }
  ],
  "icon": "fa fa-cog",
@@ -347,7 +358,7 @@
    "link_fieldname": "payroll_entry"
   }
  ],
- "modified": "2025-07-30 14:15:18.826081",
+ "modified": "2026-04-30 12:18:28.292217",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Entry",
@@ -367,7 +378,12 @@
   }
  ],
  "row_format": "Dynamic",
+ "search_fields": "title",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1,
+ "track_seen": 1
 }

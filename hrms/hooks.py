@@ -366,6 +366,8 @@ company_data_to_be_ignored = [
 ]
 fixtures = [
 	"Salary Component",
+	# Export the salary slip print format
+	{"doctype": "Print Format", "name": "Salary Slip"},
 	"Salary Structure",
-	"Workspace"
+	"Workspace",
 ]

@@ -14,6 +14,7 @@ from hrms.payroll.doctype.salary_structure.salary_structure import (
 	create_salary_structure_assignment,
 )
 
+
 class BulkSalaryAssignment(Document):
 	@frappe.whitelist()
 	def get_employees(self, advanced_filters: list) -> list:
@@ -59,20 +60,28 @@ class BulkSalaryAssignment(Document):
 		)
 		return query.run(as_dict=True)
 
-	@frappe.whitelist()
-	def bulk_assign_structure(self, employees: list) -> None:
+	def on_submit(self):
+		if not getattr(self, "employees", None):
+			frappe.throw(_("Please get and assign employees first before submitting."))
+
 		mandatory_fields = ["salary_structure", "from_date", "company"]
-		validate_bulk_tool_fields(self, mandatory_fields, employees)
+		for field in mandatory_fields:
+			if not self.get(field):
+				frappe.throw(_("{0} is mandatory").format(self.meta.get_label(field)))
+
+		# Convert employees child table to dicts
+		employees = [{"employee": d.employee, "base": d.base, "variable": d.variable} for d in self.employees]
 
 		if len(employees) <= 30:
-			return self._bulk_assign_structure(employees)
+			self._bulk_assign_structure(employees)
+		else:
+			frappe.enqueue(self._bulk_assign_structure, timeout=3000, employees=employees)
+			frappe.msgprint(
+				_("Creation of Salary Structure Assignments has been queued. It may take a few minutes."),
+				alert=True,
+				indicator="blue",
+			)
 
-		frappe.enqueue(self._bulk_assign_structure, timeout=3000, employees=employees)
-		frappe.msgprint(
-			_("Creation of Salary Structure Assignments has been queued. It may take a few minutes."),
-			alert=True,
-			indicator="blue",
-		)
 	def _bulk_assign_structure(self, employees: list) -> None:
 		success, failure = [], []
 		count = 0
@@ -113,6 +122,82 @@ class BulkSalaryAssignment(Document):
 		frappe.publish_realtime(
 			"completed_bulk_salary_structure_assignment",
 			message={"success": success, "failure": failure},
-			doctype="Bulk Salary Structure Assignment",
+			doctype="Bulk Salary Assignment",
 			after_commit=True,
 		)
+
+	@frappe.whitelist()
+	def create_payroll_entry(self):
+		if self.docstatus != 1:
+			frappe.throw(_("Document must be submitted to create Payroll Entry"))
+
+		if not getattr(self, "employees", None):
+			frappe.throw(_("No employees found for this assignment"))
+		# Get users with Signatory Role
+		pe = frappe.new_doc("Payroll Entry")
+		pe.company = self.company
+		pe.title = self.title
+		pe.currency = self.currency
+		pe.payroll_payable_account = self.payroll_payable_account
+
+		# Set posting date and payroll frequency
+		pe.posting_date = self.from_date
+		pe.payroll_frequency = "Monthly"
+
+		# Compute start_date and end_date from payroll frequency
+		from hrms.payroll.doctype.payroll_entry.payroll_entry import get_start_end_dates
+
+		date_details = get_start_end_dates(pe.payroll_frequency, pe.posting_date, pe.company)
+		pe.start_date = date_details.start_date
+		pe.end_date = date_details.end_date
+
+		# Set exchange rate: 1.0 if same currency, otherwise fetch rate
+		company_currency = frappe.db.get_value("Company", self.company, "default_currency")
+		if self.currency and self.currency != company_currency:
+			from erpnext.setup.utils import get_exchange_rate
+
+			pe.exchange_rate = get_exchange_rate(self.currency, company_currency, pe.posting_date) or 1.0
+		else:
+			pe.exchange_rate = 1.0
+
+		# Add employees to Payroll Entry
+		for emp in self.employees:
+			pe.append("employees", {"employee": emp.employee, "employee_name": emp.employee_name})
+
+		# Populate sign_approvers if Payroll Entry has the sign workflow custom fields
+		if frappe.get_meta("Payroll Entry").has_field("sign_approvers"):
+			signatory_users = frappe.get_all(
+				"Has Role",
+				filters={"role": "Signatory", "parenttype": "User"},
+				fields=["parent"],
+			)
+
+			if not signatory_users:
+				frappe.throw(
+					_(
+						"No users with the 'Signatory' role found. Please assign the Signatory role to at least one user."
+					)
+				)
+
+			for su in signatory_users:
+				user = su.parent
+				user_info = frappe.db.get_value("User", user, ["full_name", "email", "enabled"], as_dict=True)
+				if not user_info or not user_info.enabled:
+					continue
+				pe.append(
+					"sign_approvers",
+					{
+						"signer": user,
+						"signer_name": user_info.full_name or user,
+						"signer_email": user_info.email or user,
+						"role": "SIGNER",
+					},
+				)
+
+			if not pe.get("sign_approvers"):
+				frappe.throw(
+					_("No enabled users with the 'Signatory' role found. Cannot create Payroll Entry.")
+				)
+
+		pe.insert(ignore_permissions=True)
+		return pe.name
