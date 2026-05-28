@@ -44,6 +44,9 @@ class PayrollEntry(Document):
 
 			self.overtime_step = overtime_step
 
+		if self.salary_slips_created:
+			self.update_payroll_summary()
+
 		if not self.docstatus == 1 or self.salary_slips_submitted:
 			return
 
@@ -51,6 +54,63 @@ class PayrollEntry(Document):
 		entries = frappe.db.count("Salary Slip", {"payroll_entry": self.name, "docstatus": 1}, ["name"])
 		if cint(entries) == len(self.employees):
 			self.set_onload("submitted_ss", True)
+
+	def update_payroll_summary(self):
+		ss = frappe.qb.DocType("Salary Slip")
+		totals = (
+			frappe.qb.from_(ss)
+			.select(
+				frappe.query_builder.functions.Sum(ss.gross_pay).as_("total_gross_pay"),
+				frappe.query_builder.functions.Sum(ss.net_pay).as_("total_net_pay"),
+			)
+			.where(
+				(ss.payroll_entry == self.name)
+				& (ss.docstatus != 2)
+			)
+		).run(as_dict=True)
+
+		if totals:
+			self.total_gross_pay = flt(totals[0].total_gross_pay)
+			self.total_net_pay = flt(totals[0].total_net_pay)
+
+		ssd = frappe.qb.DocType("Salary Detail")
+		nssf_total = (
+			frappe.qb.from_(ss)
+			.join(ssd).on(ss.name == ssd.parent)
+			.select(frappe.query_builder.functions.Sum(ssd.amount).as_("total"))
+			.where(
+				(ss.payroll_entry == self.name)
+				& (ss.docstatus != 2)
+				& (ssd.parentfield == "deductions")
+				& (ssd.salary_component.like("%NSSF%"))
+			)
+		).run(as_dict=True)
+
+		self.total_nssf = flt(nssf_total[0].total) if nssf_total else 0
+
+		paye_total = (
+			frappe.qb.from_(ss)
+			.join(ssd).on(ss.name == ssd.parent)
+			.select(frappe.query_builder.functions.Sum(ssd.amount).as_("total"))
+			.where(
+				(ss.payroll_entry == self.name)
+				& (ss.docstatus != 2)
+				& (ssd.parentfield == "deductions")
+				& (ssd.salary_component.like("%PAYE%"))
+			)
+		).run(as_dict=True)
+
+		self.total_paye = flt(paye_total[0].total) if paye_total else 0
+
+	@frappe.whitelist()
+	def get_payroll_summary(self):
+		self.update_payroll_summary()
+		return {
+			"total_gross_pay": self.total_gross_pay,
+			"total_net_pay": self.total_net_pay,
+			"total_nssf": self.total_nssf,
+			"total_paye": self.total_paye,
+		}
 
 	def validate(self):
 		self.number_of_employees = len(self.employees)
@@ -1563,6 +1623,13 @@ def create_salary_slips_for_employees(employees, args, publish_progress=True):
 				)
 
 		payroll_entry.db_set({"status": "Submitted", "salary_slips_created": 1, "error_message": ""})
+		payroll_entry.update_payroll_summary()
+		payroll_entry.db_set({
+			"total_gross_pay": payroll_entry.total_gross_pay,
+			"total_net_pay": payroll_entry.total_net_pay,
+			"total_nssf": payroll_entry.total_nssf,
+			"total_paye": payroll_entry.total_paye,
+		})
 
 		if salary_slips_exist_for:
 			frappe.msgprint(
@@ -1653,6 +1720,13 @@ def submit_salary_slips_for_employees(payroll_entry, salary_slips, publish_progr
 			payroll_entry.make_accrual_jv_entry(submitted)
 			payroll_entry.email_salary_slip(submitted)
 			payroll_entry.db_set({"salary_slips_submitted": 1, "status": "Submitted", "error_message": ""})
+		payroll_entry.update_payroll_summary()
+		payroll_entry.db_set({
+			"total_gross_pay": payroll_entry.total_gross_pay,
+			"total_net_pay": payroll_entry.total_net_pay,
+			"total_nssf": payroll_entry.total_nssf,
+			"total_paye": payroll_entry.total_paye,
+		})
 
 		show_payroll_submission_status(submitted, unsubmitted, payroll_entry)
 

@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Coalesce
 from frappe.query_builder.terms import SubQuery
-from frappe.utils import get_link_to_form
+from frappe.utils import flt, get_link_to_form
 
 from hrms.hr.utils import validate_bulk_tool_fields
 from hrms.payroll.doctype.salary_structure.salary_structure import (
@@ -16,6 +16,13 @@ from hrms.payroll.doctype.salary_structure.salary_structure import (
 
 
 class BulkSalaryAssignment(Document):
+	def validate(self):
+		self.calculate_totals()
+
+	def calculate_totals(self):
+		self.total_base = sum(flt(d.base) for d in self.employees)
+		self.total_variable = sum(flt(d.variable) for d in self.employees)
+
 	@frappe.whitelist()
 	def get_employees(self, advanced_filters: list) -> list:
 		quick_filter_fields = [

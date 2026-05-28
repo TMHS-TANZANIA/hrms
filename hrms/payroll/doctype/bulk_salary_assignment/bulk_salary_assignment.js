@@ -88,11 +88,23 @@ frappe.ui.form.on("Bulk Salary Assignment", {
                     row.variable = d.variable;
                 });
                 frm.refresh_field("employees");
+                frm.trigger("calculate_totals");
                 frappe.msgprint(__("Employees fetched successfully."));
             } else {
                 frappe.msgprint(__("No employees found based on the given filters."));
             }
         });
+    },
+
+    calculate_totals(frm) {
+        let total_base = 0;
+        let total_variable = 0;
+        (frm.doc.employees || []).forEach((row) => {
+            total_base += flt(row.base);
+            total_variable += flt(row.variable);
+        });
+        frm.set_value("total_base", total_base);
+        frm.set_value("total_variable", total_variable);
     },
 
     create_payroll_entry(frm) {
@@ -106,4 +118,16 @@ frappe.ui.form.on("Bulk Salary Assignment", {
             }
         });
     }
+});
+
+frappe.ui.form.on("Bulk Salary Assignment Employee", {
+    base(frm) {
+        frm.trigger("calculate_totals");
+    },
+    variable(frm) {
+        frm.trigger("calculate_totals");
+    },
+    employees_remove(frm) {
+        frm.trigger("calculate_totals");
+    },
 });

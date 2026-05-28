@@ -27,6 +27,10 @@
   "filter_list",
   "select_employees_section",
   "employees",
+  "summary_section",
+  "total_base",
+  "column_break_summary",
+  "total_variable",
   "amended_from"
  ],
  "fields": [
@@ -150,6 +154,29 @@
    "options": "Bulk Salary Assignment Employee"
   },
   {
+   "fieldname": "summary_section",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "total_base",
+   "fieldtype": "Currency",
+   "label": "Total Base",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_summary",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_variable",
+   "fieldtype": "Currency",
+   "label": "Total Variable",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -170,14 +197,15 @@
  "hide_toolbar": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-30 12:20:07.896457",
- "modified_by": "Administrator",
+ "modified": "2026-05-27 08:20:21.777552",
+ "modified_by": "chochote@gmail.com",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",
  "naming_rule": "By fieldname",
  "owner": "james@example.com",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -186,7 +214,9 @@
    "read": 1,
    "report": 1,
    "role": "HR Manager",
+   "select": 1,
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -195,7 +225,9 @@
    "print": 1,
    "read": 1,
    "role": "HR User",
+   "select": 1,
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],
@@ -205,5 +237,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "title"
+ "title_field": "title",
+ "track_changes": 1
 }

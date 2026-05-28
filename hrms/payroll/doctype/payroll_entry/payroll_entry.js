@@ -64,6 +64,26 @@ frappe.ui.form.on("Payroll Entry", {
 	refresh: (frm) => {
 		if (frm.doc.status === "Queued") frm.page.btn_secondary.hide();
 
+		if (frm.doc.salary_slips_created) {
+			frm.add_custom_button(__("Refresh Summary"), function () {
+				frm.call({
+					doc: frm.doc,
+					method: "get_payroll_summary",
+					freeze: true,
+					freeze_message: __("Calculating Payroll Summary..."),
+					callback: function (r) {
+						if (r.message) {
+							frm.set_value("total_gross_pay", r.message.total_gross_pay);
+							frm.set_value("total_net_pay", r.message.total_net_pay);
+							frm.set_value("total_nssf", r.message.total_nssf);
+							frm.set_value("total_paye", r.message.total_paye);
+							frm.refresh_fields();
+						}
+					},
+				});
+			});
+		}
+
 		if (frm.doc.docstatus === 0 && !frm.is_new()) {
 			frm.page.clear_primary_action();
 			frm.add_custom_button(__("Get Employees"), function () {
