@@ -17,11 +17,23 @@ from hrms.payroll.doctype.salary_structure.salary_structure import (
 
 class BulkSalaryAssignment(Document):
 	def validate(self):
+		for d in self.employees:
+			if d.base <= 0:
+				frappe.throw(_("Base salary must be greater than zero for employee {0}").format(frappe.get_doc("Employee", d.employee).employee_name))
 		self.calculate_totals()
 
 	def calculate_totals(self):
 		self.total_base = sum(flt(d.base) for d in self.employees)
 		self.total_variable = sum(flt(d.variable) for d in self.employees)
+
+	@frappe.whitelist()
+	def update_employee(self, employee, key, value):
+		employee = frappe.get_doc("Employee", employee)
+		if key == "has_health_insurance" and value:
+			employee.set("health_insurance", "NHIF (National Health Insurance Fund)")
+			employee.set("health_insurance_percentage", 3)
+		employee.set(key, value)
+		employee.save()
 
 	@frappe.whitelist()
 	def get_employees(self, advanced_filters: list) -> list:
@@ -45,39 +57,42 @@ class BulkSalaryAssignment(Document):
 		)
 
 		Employee = frappe.qb.DocType("Employee")
-		Grade = frappe.qb.DocType("Employee Grade")
-		query = (
-			frappe.qb.get_query(
-				Employee,
-				fields=[Employee.employee, Employee.employee_name, Employee.grade],
-				filters=filters,
-			)
-			.where(
-				(Employee.status == "Active")
-				& (Employee.date_of_joining <= self.from_date)
-				& ((Employee.relieving_date > self.from_date) | (Employee.relieving_date.isnull()))
-				& (Employee.employee.notin(employees_with_assignments))
-			)
-			.left_join(Grade)
-			.on(Employee.grade == Grade.name)
-			.select(
-				Coalesce(Grade.default_base_pay, 0).as_("base"),
-				ConstantColumn(0).as_("variable"),
-			)
+		query = frappe.qb.get_query(
+			Employee,
+			fields=[
+				Employee.employee,
+				Employee.employee_name,
+				Employee.grade,
+				Employee.has_nssf,
+				Employee.has_health_insurance,
+				Employee.has_helsb,
+			],
+			filters=filters,
+		).where(
+			(Employee.status == "Active")
+			& (Employee.date_of_joining <= self.from_date)
+			& ((Employee.relieving_date > self.from_date) | (Employee.relieving_date.isnull()))
+			& (Employee.employee.notin(employees_with_assignments))
 		)
 		return query.run(as_dict=True)
 
 	def on_submit(self):
 		if not getattr(self, "employees", None):
+			frappe.log_error(_("Please get and assign employees first before submitting."))
 			frappe.throw(_("Please get and assign employees first before submitting."))
 
 		mandatory_fields = ["salary_structure", "from_date", "company"]
 		for field in mandatory_fields:
 			if not self.get(field):
+				frappe.log_error(_("{0} is mandatory").format(self.meta.get_label(field)))
 				frappe.throw(_("{0} is mandatory").format(self.meta.get_label(field)))
 
 		# Convert employees child table to dicts
-		employees = [{"employee": d.employee, "base": d.base, "variable": d.variable} for d in self.employees]
+		employees = []
+		for d in self.employees:
+			if d.base <= 0:
+				frappe.throw(_("Base salary must be greater than zero for employee {0}").format(d.employee))
+			employees.append({"employee": d.employee, "base": d.base, "variable": d.variable})
 
 		if len(employees) <= 30:
 			self._bulk_assign_structure(employees)

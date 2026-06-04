@@ -86,6 +86,10 @@ frappe.ui.form.on("Bulk Salary Assignment", {
                     row.employee_name = d.employee_name;
                     row.base = d.base;
                     row.variable = d.variable;
+                    row.has_nssf = d.has_nssf;
+                    row.has_health_insurance = d.has_health_insurance;
+                    row.has_helsb = d.has_helsb;
+                    console.log(d);
                 });
                 frm.refresh_field("employees");
                 frm.trigger("calculate_totals");
@@ -123,6 +127,42 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 frappe.ui.form.on("Bulk Salary Assignment Employee", {
     base(frm) {
         frm.trigger("calculate_totals");
+    },
+    has_health_insurance(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        frm.call({
+            doc: frm.doc,
+            method: "update_employee",
+            args: {
+                employee: row.employee,
+                key: "has_health_insurance",
+                value: row.has_health_insurance,
+            },
+        });
+    },
+    has_nssf(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        frm.call({
+            doc: frm.doc,
+            method: "update_employee",
+            args: {
+                employee: row.employee,
+                key: "has_nssf",
+                value: row.has_nssf,
+            },
+        });
+    },
+    has_helsb(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        frm.call({
+            doc: frm.doc,
+            method: "update_employee",
+            args: {
+                employee: row.employee,
+                key: "has_helsb",
+                value: row.has_helsb,
+            },
+        });
     },
     variable(frm) {
         frm.trigger("calculate_totals");

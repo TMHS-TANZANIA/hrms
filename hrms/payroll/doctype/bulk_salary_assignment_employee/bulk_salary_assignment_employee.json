@@ -9,7 +9,10 @@
   "employee",
   "employee_name",
   "base",
-  "variable"
+  "variable",
+  "has_nssf",
+  "has_helsb",
+  "has_health_insurance"
  ],
  "fields": [
   {
@@ -39,13 +42,34 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Variable"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_nssf",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "NSSF"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_helsb",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "HESLB"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_health_insurance",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "NHIF"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-06 10:53:24.797123",
+ "modified": "2026-06-03 15:36:07.535682",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment Employee",

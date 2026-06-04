@@ -50,6 +50,13 @@
   "salary_slips_created",
   "salary_slips_submitted",
   "overtime_step",
+  "payroll_summary_tab",
+  "payroll_summary_section",
+  "total_gross_pay",
+  "total_nssf",
+  "column_break_summary",
+  "total_net_pay",
+  "total_paye",
   "failure_details_section",
   "error_message",
   "section_break_41",
@@ -348,6 +355,49 @@
    "fieldtype": "Data",
    "label": "Title",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.salary_slips_created",
+   "fieldname": "payroll_summary_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payroll Summary"
+  },
+  {
+   "fieldname": "payroll_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Salary Slip Totals"
+  },
+  {
+   "fieldname": "total_gross_pay",
+   "fieldtype": "Currency",
+   "label": "Total Gross Pay",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_nssf",
+   "fieldtype": "Currency",
+   "label": "Total NSSF",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_summary",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_net_pay",
+   "fieldtype": "Currency",
+   "label": "Total Net Pay",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_paye",
+   "fieldtype": "Currency",
+   "label": "Total PAYE",
+   "options": "currency",
+   "read_only": 1
   }
  ],
  "icon": "fa fa-cog",
@@ -358,7 +408,7 @@
    "link_fieldname": "payroll_entry"
   }
  ],
- "modified": "2026-04-30 12:18:28.292217",
+ "modified": "2026-05-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Entry",
