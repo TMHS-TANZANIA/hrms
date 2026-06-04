@@ -18,8 +18,8 @@ from hrms.payroll.doctype.salary_structure.salary_structure import (
 class BulkSalaryAssignment(Document):
 	def validate(self):
 		for d in self.employees:
-			if d.base <= 0:
-				frappe.throw(_("Base salary must be greater than zero for employee {0}").format(frappe.get_doc("Employee", d.employee).employee_name))
+			if flt(d.base) <= 0:
+				frappe.throw(_("Base salary must be greater than zero for employee {0}").format(d.employee_name or d.employee))
 		self.calculate_totals()
 
 	def calculate_totals(self):
