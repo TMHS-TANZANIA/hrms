@@ -90,7 +90,7 @@ class BulkSalaryAssignment(Document):
 		# Convert employees child table to dicts
 		employees = []
 		for d in self.employees:
-			if d.base <= 0:
+			if d.base is None or d.base <= 0:
 				frappe.throw(_("Base salary must be greater than zero for employee {0}").format(d.employee))
 			employees.append({"employee": d.employee, "base": d.base, "variable": d.variable})
 
