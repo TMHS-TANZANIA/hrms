@@ -34,6 +34,16 @@ class BulkSalaryAssignment(Document):
 			employee.set("health_insurance_percentage", 3)
 		employee.set(key, value)
 		employee.save()
+	@frappe.whitelist()
+	def get_employee_details(self, employee) -> dict:
+		employee = frappe.get_doc("Employee", employee)
+		return {
+			"employee_name": employee.employee_name,
+			"grade": employee.grade,
+			"has_nssf": employee.has_nssf,
+			"has_health_insurance": employee.has_health_insurance,
+			"has_helsb": employee.has_helsb,
+		}
 
 	@frappe.whitelist()
 	def get_employees(self, advanced_filters: list) -> list:

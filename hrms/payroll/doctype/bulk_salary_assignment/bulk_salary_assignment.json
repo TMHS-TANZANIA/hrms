@@ -29,8 +29,12 @@
   "employees",
   "summary_section",
   "total_base",
+  "total_nhif",
+  "total_nssf",
   "column_break_summary",
   "total_variable",
+  "total_heslb",
+  "total_paye",
   "amended_from"
  ],
  "fields": [
@@ -192,12 +196,40 @@
    "label": "Title",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "total_nhif",
+   "fieldtype": "Currency",
+   "label": "Total NHIF",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_heslb",
+   "fieldtype": "Currency",
+   "label": "Total HESLB",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_nssf",
+   "fieldtype": "Currency",
+   "label": "Total NSSF",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_paye",
+   "fieldtype": "Currency",
+   "label": "Total PAYE",
+   "options": "currency",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-27 08:20:21.777552",
- "modified_by": "chochote@gmail.com",
+ "modified": "2026-06-04 12:25:19.919395",
+ "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",
  "naming_rule": "By fieldname",

@@ -99,23 +99,82 @@ frappe.ui.form.on("Bulk Salary Assignment", {
             }
         });
     },
-
+    before_save(frm) {
+        frm.trigger("calculate_totals");
+    },
     calculate_totals(frm) {
         let total_base = 0;
+        let total_nhif = 0;
+        let total_heslb = 0;
+        let total_nssf = 0;
         let total_variable = 0;
+        let total_paye = 0;
+        let paye_calculator = (TAXABLE_INCOME) => {
+            paye = 0;
+            if (TAXABLE_INCOME < 270000) {
+                paye = 0;
+            }
+            else if (TAXABLE_INCOME < 520000) {
+                paye = (0.08 * (TAXABLE_INCOME - 270000));
+            }
+            else if (TAXABLE_INCOME < 760000) {
+                paye = (20000 + (0.2 * (TAXABLE_INCOME - 520000)))
+            }
+            else if (TAXABLE_INCOME < 1000000) {
+                paye = (68000 + (0.25 * (TAXABLE_INCOME - 760000)))
+            }
+            else {
+                paye = (128000 + (0.3 * (TAXABLE_INCOME - 1000000)))
+            }
+            return paye;
+        }
         (frm.doc.employees || []).forEach((row) => {
+            nssf = 0
             total_base += flt(row.base);
             total_variable += flt(row.variable);
+            if (row.has_health_insurance) {
+                total_nhif += flt(row.base) * 0.03;
+            }
+            if (row.has_helsb) {
+                total_heslb += flt(row.base) * 0.15;
+            }
+            if (row.has_nssf) {
+                nssf = flt(row.base) * 0.1;
+                total_nssf += flt(row.base) * 0.1;
+            }
+            total_paye += paye_calculator(flt(row.base) + flt(row.variable) - nssf);
         });
         frm.set_value("total_base", total_base);
+        frm.set_value("total_nhif", total_nhif);
+        frm.set_value("total_heslb", total_heslb);
+        frm.set_value("total_nssf", total_nssf);
         frm.set_value("total_variable", total_variable);
+        frm.set_value("total_paye", total_paye);
     },
-
+    paye_calculator(TAXABLE_INCOME) {
+        paye = 0;
+        if (TAXABLE_INCOME < 270000) {
+            paye = 0;
+        }
+        else if (TAXABLE_INCOME < 520000) {
+            paye = round(0.08 * (TAXABLE_INCOME - 270000));
+        }
+        else if (TAXABLE_INCOME < 760000) {
+            paye = round(20000 + (0.2 * (TAXABLE_INCOME - 520000)))
+        }
+        else if (TAXABLE_INCOME < 1000000) {
+            paye = round(68000 + (0.25 * (TAXABLE_INCOME - 760000)))
+        }
+        else {
+            paye = round(128000 + (0.3 * (TAXABLE_INCOME - 1000000)))
+        }
+        return paye;
+    },
     create_payroll_entry(frm) {
         frappe.call({
             method: "create_payroll_entry",
             doc: frm.doc,
-            callback: function(r) {
+            callback: function (r) {
                 if (r.message) {
                     frappe.set_route("Form", "Payroll Entry", r.message);
                 }
@@ -130,39 +189,15 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
     },
     has_health_insurance(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        frm.call({
-            doc: frm.doc,
-            method: "update_employee",
-            args: {
-                employee: row.employee,
-                key: "has_health_insurance",
-                value: row.has_health_insurance,
-            },
-        });
+        update_employee(frm, row.employee, "has_health_insurance", row.has_health_insurance);
     },
     has_nssf(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        frm.call({
-            doc: frm.doc,
-            method: "update_employee",
-            args: {
-                employee: row.employee,
-                key: "has_nssf",
-                value: row.has_nssf,
-            },
-        });
+        update_employee(frm, row.employee, "has_nssf", row.has_nssf);
     },
     has_helsb(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        frm.call({
-            doc: frm.doc,
-            method: "update_employee",
-            args: {
-                employee: row.employee,
-                key: "has_helsb",
-                value: row.has_helsb,
-            },
-        });
+        update_employee(frm, row.employee, "has_helsb", row.has_helsb);
     },
     variable(frm) {
         frm.trigger("calculate_totals");
@@ -170,4 +205,44 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
     employees_remove(frm) {
         frm.trigger("calculate_totals");
     },
+    employee(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.employee) {
+            frappe.call({
+                doc: frm.doc,
+                method: "get_employee_details",
+                args: {
+                    employee: row.employee,
+                },
+            }).then((r) => {
+                if (r.message) {
+                    row.employee_name = r.message.employee_name;
+                    row.base = r.message.base;
+                    row.variable = r.message.variable;
+                    row.has_nssf = r.message.has_nssf;
+                    row.has_health_insurance = r.message.has_health_insurance;
+                    row.has_helsb = r.message.has_helsb;
+                    frm.refresh_field("employees");
+                    frm.trigger("calculate_totals");
+                }
+            });
+        }
+    },
 });
+
+function update_employee(frm, employee, key, value) {
+    console.log("Updating employee", employee, key, value);
+    frm.call({
+        doc: frm.doc,
+        freeze: true,
+        method: "update_employee",
+        args: {
+            employee: employee,
+            key: key,
+            value: value,
+        },
+        callback: function () {
+            frm.trigger("calculate_totals");
+        }
+    });
+}
