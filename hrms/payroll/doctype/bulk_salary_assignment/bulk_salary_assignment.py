@@ -171,6 +171,11 @@ class BulkSalaryAssignment(Document):
 		pe.title = self.title
 		pe.currency = self.currency
 		pe.payroll_payable_account = self.payroll_payable_account
+		pe.total_base = self.total_base
+		pe.total_variable = self.total_variable
+		pe.totoal_nhif = self.total_nhif
+		pe.total_nssf = self.total_nssf
+		pe.total_helsb = self.total_helsb
 
 		# Set posting date and payroll frequency
 		pe.posting_date = self.from_date

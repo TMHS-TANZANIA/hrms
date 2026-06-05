@@ -52,9 +52,12 @@
   "overtime_step",
   "payroll_summary_tab",
   "payroll_summary_section",
+  "total_base",
   "total_gross_pay",
   "total_nssf",
+  "total_heslb",
   "column_break_summary",
+  "total_variable",
   "total_net_pay",
   "total_paye",
   "failure_details_section",
@@ -398,6 +401,21 @@
    "label": "Total PAYE",
    "options": "currency",
    "read_only": 1
+  },
+  {
+   "fieldname": "total_base",
+   "fieldtype": "Currency",
+   "label": "Total Base"
+  },
+  {
+   "fieldname": "total_heslb",
+   "fieldtype": "Currency",
+   "label": "Total HESLB"
+  },
+  {
+   "fieldname": "total_variable",
+   "fieldtype": "Currency",
+   "label": "Total Variable"
   }
  ],
  "icon": "fa fa-cog",
@@ -408,7 +426,7 @@
    "link_fieldname": "payroll_entry"
   }
  ],
- "modified": "2026-05-26 10:00:00.000000",
+ "modified": "2026-06-05 11:00:26.305343",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Entry",
