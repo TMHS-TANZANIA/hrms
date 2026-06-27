@@ -42,7 +42,8 @@ class BulkSalaryAssignment(Document):
 			"grade": employee.grade,
 			"has_nssf": employee.has_nssf,
 			"has_health_insurance": employee.has_health_insurance,
-			"has_helsb": employee.has_helsb,
+			"has_heslb": employee.has_helsb,
+			"gross_amount": employee.gross_amount,
 		}
 
 	@frappe.whitelist()
@@ -76,6 +77,7 @@ class BulkSalaryAssignment(Document):
 				Employee.has_nssf,
 				Employee.has_health_insurance,
 				Employee.has_helsb,
+				Employee.gross_amount,
 			],
 			filters=filters,
 		).where(
@@ -175,7 +177,10 @@ class BulkSalaryAssignment(Document):
 		pe.total_nhif = self.total_nhif
 		pe.total_nssf = self.total_nssf
 		pe.total_heslb = self.total_heslb
-
+		pe.total_paye = self.total_paye
+		pe.total_gross_summary = self.total_base
+		pe.total_net_pay_summary = self.total_base - self.total_nssf - self.total_paye - self.total_nhif - self.total_heslb
+		pe.bulk_salary_assignment = self.name
 		# Set posting date and payroll frequency
 		pe.posting_date = self.from_date
 		pe.payroll_frequency = "Monthly"
@@ -198,7 +203,10 @@ class BulkSalaryAssignment(Document):
 
 		# Add employees to Payroll Entry
 		for emp in self.employees:
-			pe.append("employees", {"employee": emp.employee, "employee_name": emp.employee_name})
+			pe.append("employees", {"employee": emp.employee, "employee_name": emp.employee_name,
+                           "base": emp.base, "nssf": emp.nssf, "paye": emp.paye, "nhif": emp.nhif, "heslb": emp.heslb,
+                           "net_salary": emp.net_salary
+                           })
 
 		# Populate sign_approvers if Payroll Entry has the sign workflow custom fields
 		if frappe.get_meta("Payroll Entry").has_field("sign_approvers"):
