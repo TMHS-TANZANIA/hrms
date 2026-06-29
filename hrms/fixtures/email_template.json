@@ -1,0 +1,12 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Email Template",
+  "modified": "2026-06-29 13:45:37.050020",
+  "name": "Payroll Entry",
+  "response": "<div class=\"ql-editor read-mode\"><p><br></p></div>",
+  "response_html": "<p>Dear Team,</p>\n\n<p>A new Payroll Entry has been generated and is awaiting your review before final processing.</p>\n\n<table style=\"border-collapse: collapse; width: 100%; margin: 15px 0;\">\n  <tr>\n    <td style=\"padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 30%;\">Payroll Entry ID:</td>\n    <td style=\"padding: 8px; border: 1px solid #ddd;\">{{ doc.name }}</td>\n  </tr>\n  <tr>\n    <td style=\"padding: 8px; border: 1px solid #ddd; font-weight: bold;\">Posting Date:</td>\n    <td style=\"padding: 8px; border: 1px solid #ddd;\">{{ doc.posting_date }}</td>\n  </tr>\n  <tr>\n    <td style=\"padding: 8px; border: 1px solid #ddd; font-weight: bold;\">Payroll Frequency:</td>\n    <td style=\"padding: 8px; border: 1px solid #ddd;\">{{ doc.payroll_frequency }}</td>\n  </tr>\n  <tr>\n    <td style=\"padding: 8px; border: 1px solid #ddd; font-weight: bold;\">Total Employees:</td>\n    <td style=\"padding: 8px; border: 1px solid #ddd;\">{{ doc.number_of_employees or 'Not yet generated' }}</td>\n  </tr>\n</table>\n\n<p>Please click the button below to review the document and proceed with the workflow actions:</p>\n\n<p style=\"margin: 25px 0;\">\n  <a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\" \n     style=\"background-color: #1b66ec; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;\">\n     Review Payroll Entry\n  </a>\n</p>\n\n<p>If the button doesn't work, you can also copy and paste this URL into your browser:<br>\n<span style=\"color: #555;\">{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}</span></p>\n\n<p>Regards,<br>\nSystem Notification</p>",
+  "subject": "Action Required: Review Payroll Entry for {{ doc.payroll_frequency }} - {{ doc.posting_date }}",
+  "use_html": 1
+ }
+]

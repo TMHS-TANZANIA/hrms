@@ -1,0 +1,20 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-06-29 13:30:38.095812",
+  "name": "Waiting for HR Review",
+  "style": "",
+  "workflow_state_name": "Waiting for HR Review"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-06-29 13:31:00.320565",
+  "name": "Waiting for Direcotr",
+  "style": "",
+  "workflow_state_name": "Waiting for Direcotr"
+ }
+]

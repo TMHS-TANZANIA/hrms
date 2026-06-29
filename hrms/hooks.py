@@ -365,9 +365,29 @@ company_data_to_be_ignored = [
 	"Employee Separation Template",
 ]
 fixtures = [
-	"Salary Component",
+	# "Salary Component",
 	# Export the salary slip print format
-	{"doctype": "Print Format", "name": "Salary Slip"},
-	"Salary Structure",
-	"Workspace",
+	# {"doctype": "Print Format", "name": "Salary Slip"},
+	# "Salary Structure",
+	# "Workspace",
+	{
+        "dt": "Workflow",
+        "filters": [["name", "in", ["PAYROLL-T"]]] # Replace with your workflow name
+    },
+    {
+        "dt": "Workflow Transition",
+        "filters": [["name", "in", ["Waiting for HR Review","Waiting for Direcotr"]]] # Replace with your workflow transition name
+    },
+    {
+        "dt": "Workflow State",
+        "filters": [["name", "in", ["Waiting for HR Review","Waiting for Direcotr"]]] # Replace with your workflow state name
+    },
+    {
+        "dt": "Workflow Action",
+        "filters": [["name", "in", ["Return to Draft","Review"]]] # Replace with your workflow action name
+    },
+    {
+        "dt": "Email Template",
+        "filters": [["name", "in", ["Payroll Entry"]]] # Replace with your template name
+    }
 ]
