@@ -372,7 +372,7 @@ fixtures = [
 	# "Workspace",
 	{
         "dt": "Workflow",
-        "filters": [["name", "in", ["PAYROLL-T"]]] # Replace with your workflow name
+        "filters": [["name", "in", ["PAYROLL-T","Gross Salary History"]]] # Replace with your workflow name
     },
     {
         "dt": "Workflow Transition",
