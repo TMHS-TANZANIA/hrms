@@ -50,89 +50,13 @@ Initially, it was a set of modules within ERPNext but version 14 onwards, as the
 	<img src=".github/hrms-pwa.png"/>
 </details>
 
-### Under the Hood
-
-- [**Frappe Framework**](https://github.com/frappe/frappe): A full-stack web application framework written in Python and Javascript. The framework provides a robust foundation for building web applications, including a database abstraction layer, user authentication, and a REST API.
-
-- [**Frappe UI**](https://github.com/frappe/frappe-ui): A Vue-based UI library, to provide a modern user interface. The Frappe UI library provides a variety of components that can be used to build single-page applications on top of the Frappe Framework.
-
-## Production Setup
-
-### Managed Hosting
-
-You can try [Frappe Cloud](https://frappecloud.com), a simple, user-friendly and sophisticated [open-source](https://github.com/frappe/press) platform to host Frappe applications with peace of mind.
-
-It takes care of installation, setup, upgrades, monitoring, maintenance and support of your Frappe deployments. It is a fully featured developer platform with an ability to manage and control multiple Frappe deployments.
-
-<div>
-	<a href="https://frappecloud.com/hrms/signup" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/try-on-fc-white.png">
-			<img src="https://frappe.io/files/try-on-fc-black.png" alt="Try on Frappe Cloud" height="28" />
-		</picture>
-	</a>
-</div>
-
-
-## Development setup
-### Docker
-You need Docker, docker-compose and git setup on your machine. Refer [Docker documentation](https://docs.docker.com/). After that, run the following commands:
+   ps.remarks = doc.remark
+    ps.offence_category = doc.offence_category
+    ps.offences = doc.offence
+    ps.investigator_employee = doc.employees_name
+    ps.disciplinary_investigation = doc.name
+    ps.full_name = doc.name
+    ps.phone = doc.name
+    ps.email = doc.name
+    ps.department = doc.name
 ```
-git clone https://github.com/frappe/hrms
-cd hrms/docker
-docker-compose up
-```
-
-Wait for some time until the setup script creates a site. After that you can access `http://localhost:8000` in your browser and the login screen for HR should show up.
-
-Use the following credentials to log in:
-
-- Username: `Administrator`
-- Password: `admin`
-
-### Local
-
-1. Set up bench by following the [Installation Steps](https://frappeframework.com/docs/user/en/installation) and start the server and keep it running
-	```sh
-	$ bench start
-	```
-2. In a separate terminal window, run the following commands
-	```sh
-	$ bench new-site hrms.local
-	$ bench get-app erpnext
-	$ bench get-app hrms
-	$ bench --site hrms.local install-app hrms
-	$ bench --site hrms.local add-to-hosts
-	```
-3. You can access the site at `http://hrms.local:8080`
-
-## Learning and Community
-
-1. [Frappe School](https://frappe.school) - Learn Frappe Framework and ERPNext from the various courses by the maintainers or from the community.
-2. [Documentation](https://docs.frappe.io/hr) - Extensive documentation for Frappe HR.
-3. [User Forum](https://discuss.erpnext.com/) - Engage with the community of ERPNext users and service providers.
-4. [Telegram Group](https://t.me/frappehr) - Get instant help from the community of users.
-
-
-## Contributing
-
-1. [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
-1. [Report Security Vulnerabilities](https://erpnext.com/security)
-1. [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
-
-
-## Logo and Trademark Policy
-
-Please read our [Logo and Trademark Policy](TRADEMARK_POLICY.md).
-
-<br />
-<br />
-<div align="center" style="padding-top: 0.75rem;">
-	<a href="https://frappe.io" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/Frappe-white.png">
-			<img src="https://frappe.io/files/Frappe-black.png" alt="Frappe Technologies" height="28"/>
-		</picture>
-	</a>
-</div>
-

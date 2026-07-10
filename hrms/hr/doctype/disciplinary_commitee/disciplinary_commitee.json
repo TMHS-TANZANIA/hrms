@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-06 15:00:09.505204",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "comiitees_info_section",
+  "disciplinary_committee",
+  "members_category",
+  "commitee_members"
+ ],
+ "fields": [
+  {
+   "fieldname": "comiitees_info_section",
+   "fieldtype": "Section Break",
+   "label": "Comiitee's Info"
+  },
+  {
+   "fieldname": "disciplinary_committee",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Disciplinary Committee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "members_category",
+   "fieldtype": "Data",
+   "label": "Member's Category"
+  },
+  {
+   "fieldname": "commitee_members",
+   "fieldtype": "Table",
+   "label": "Commitee Members",
+   "options": "Disciplinary Commitee Members"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-10 19:39:42.301492",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Disciplinary Commitee",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

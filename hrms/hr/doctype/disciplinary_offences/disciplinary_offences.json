@@ -1,0 +1,115 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:code",
+ "creation": "2026-07-06 13:44:25.703060",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "disciplinary_info_section",
+  "offence_category",
+  "code",
+  "name1",
+  "severity",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "disciplinary_info_section",
+   "fieldtype": "Section Break",
+   "label": "Disciplinary Info"
+  },
+  {
+   "fieldname": "offence_category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Offence Category",
+   "options": "Offence Category",
+   "reqd": 1
+  },
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code",
+   "reqd": 1,
+   "set_only_once": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "name1",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "default": "1",
+   "description": "1 low\n3 Highest",
+   "fieldname": "severity",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Severity",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-10 19:41:29.934182",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Disciplinary Offences",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Client",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "name1"
+}

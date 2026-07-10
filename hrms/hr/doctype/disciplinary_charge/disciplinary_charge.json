@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{employees_name}-{offence}",
+ "creation": "2026-07-06 14:47:12.622397",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "charges_and_proceedings_info_section",
+  "status",
+  "charge_date",
+  "interdiction_date",
+  "respone_date",
+  "offence_category",
+  "severity",
+  "employees_name",
+  "offence",
+  "remark"
+ ],
+ "fields": [
+  {
+   "fieldname": "charges_and_proceedings_info_section",
+   "fieldtype": "Section Break",
+   "label": "Disciplinary Charge Info"
+  },
+  {
+   "fieldname": "charge_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Charge Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "interdiction_date",
+   "fieldtype": "Date",
+   "label": "Interdiction Date"
+  },
+  {
+   "fieldname": "offence_category",
+   "fieldtype": "Link",
+   "label": "Offence Category",
+   "options": "Offence Category",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "offence.severity",
+   "fieldname": "severity",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Severity",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "employees_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee's Name",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark",
+   "reqd": 1
+  },
+  {
+   "fieldname": "offence",
+   "fieldtype": "Link",
+   "label": "Offence",
+   "options": "Disciplinary Offences",
+   "reqd": 1
+  },
+  {
+   "fieldname": "respone_date",
+   "fieldtype": "Date",
+   "label": "Respone Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Link",
+   "label": "Status",
+   "options": "Disciplinary Status"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Disciplinary Responses",
+   "link_doctype": "Disciplinary Response",
+   "link_fieldname": "disciplinary_charge"
+  },
+  {
+   "group": "Disciplinary Investigations",
+   "link_doctype": "Disciplinary Investigation",
+   "link_fieldname": "disciplinary_charge"
+  },
+  {
+   "group": "Proceeding Step",
+   "link_doctype": "Proceeding Step",
+   "link_fieldname": "disciplinary_charge"
+  }
+ ],
+ "modified": "2026-07-09 15:39:46.269614",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Disciplinary Charge",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
