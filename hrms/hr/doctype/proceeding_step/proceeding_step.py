@@ -28,6 +28,6 @@ class ProceedingStep(Document):
 
 		elif not self.comments:
 			frappe.throw("Please enter Comments.")
-   
+   #frappe
 		
   
