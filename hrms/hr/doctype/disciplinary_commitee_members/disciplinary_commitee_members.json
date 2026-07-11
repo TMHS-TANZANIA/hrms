@@ -40,6 +40,7 @@
    "reqd": 1
   },
   {
+   "fetch_from": "employee.cell_number",
    "fieldname": "phone_number",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -49,6 +50,7 @@
   },
   {
    "depends_on": "eval:doc.employee != \"\"",
+   "fetch_from": "employee.prefered_email",
    "fieldname": "email",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -71,7 +73,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-08 10:37:43.214264",
+ "modified": "2026-07-11 12:10:12.191104",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Disciplinary Commitee Members",
