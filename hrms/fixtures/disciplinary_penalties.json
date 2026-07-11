@@ -1,0 +1,66 @@
+[
+ {
+  "action": "Suspension",
+  "code": "SUSP",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:03:57.295460",
+  "name": "SUSP"
+ },
+ {
+  "action": "Terminated",
+  "code": "TERM",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:04:22.347005",
+  "name": "TERM"
+ },
+ {
+  "action": "Verbal Warning",
+  "code": "WRN1",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:05:02.299558",
+  "name": "WRN1"
+ },
+ {
+  "action": "Written Warning",
+  "code": "WRN2",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:05:43.397470",
+  "name": "WRN2"
+ },
+ {
+  "action": "Normal Hearing",
+  "code": "NRM",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:06:09.754071",
+  "name": "NRM"
+ },
+ {
+  "action": "Charge Notification",
+  "code": "CHR",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:07:15.259372",
+  "name": "CHR"
+ },
+ {
+  "action": "Reduction of Salary",
+  "code": "RDS",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:07:54.057293",
+  "name": "RDS"
+ },
+ {
+  "action": "Investigation",
+  "code": "INV",
+  "docstatus": 0,
+  "doctype": "Disciplinary Penalties",
+  "modified": "2026-07-08 18:06:35.891706",
+  "name": "INV"
+ }
+]

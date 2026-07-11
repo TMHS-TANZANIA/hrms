@@ -1,0 +1,90 @@
+[
+ {
+  "code": "111",
+  "description": "Did not obey orders from his leaders",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 13:55:44.966967",
+  "name": "111",
+  "name1": "Disobedience to his superiors",
+  "offence_category": "MInor Offence (MIsconduct)",
+  "severity": 1
+ },
+ {
+  "code": "112",
+  "description": "Always making up excuse not to execute the tasks assigned",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 13:58:06.322304",
+  "name": "112",
+  "name1": "Avoiding work by faking illness",
+  "offence_category": "MInor Offence (MIsconduct)",
+  "severity": 1
+ },
+ {
+  "code": "113",
+  "description": "Did not perform the tasks assigned",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 14:13:44.493684",
+  "name": "113",
+  "name1": "Negleting to carry out the duties assigned",
+  "offence_category": "Serious offence (Major MIsconduct)",
+  "severity": 3
+ },
+ {
+  "code": "114",
+  "description": "Was not found in his/her work place",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 14:10:34.459477",
+  "name": "114",
+  "name1": "Absence from his/her duties",
+  "offence_category": "Gross offence (Gross Misconduct)",
+  "severity": 2
+ },
+ {
+  "code": "115",
+  "description": "Publishing or providing inaccurate information",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 14:11:07.684550",
+  "name": "115",
+  "name1": "Making forgery of company's information",
+  "offence_category": "Serious offence (Major MIsconduct)",
+  "severity": 3
+ },
+ {
+  "code": "116",
+  "description": "Proven fraud or dishonesty",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 14:11:46.377363",
+  "name": "116",
+  "name1": "Forgery of financial information",
+  "offence_category": "Serious offence (Major MIsconduct)",
+  "severity": 3
+ },
+ {
+  "code": "117",
+  "description": "Unauthorized use or abuse of office assets",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-08 14:15:44.715543",
+  "name": "117",
+  "name1": "Use of company's assets for his/her personal gain",
+  "offence_category": "Serious offence (Major MIsconduct)",
+  "severity": 3
+ },
+ {
+  "code": "SH",
+  "description": "Caught trying to force sex to a fellow employee",
+  "docstatus": 0,
+  "doctype": "Disciplinary Offences",
+  "modified": "2026-07-11 11:47:17.547094",
+  "name": "SH",
+  "name1": "Sexual Harassment",
+  "offence_category": "Serious offence (Major MIsconduct)",
+  "severity": 5
+ }
+]

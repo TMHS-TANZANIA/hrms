@@ -1,0 +1,92 @@
+[
+ {
+  "code": "COMPL",
+  "description": "Outcome communication of resolution",
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:17:56.231687",
+  "name": "COMPL",
+  "status_name": "Complete"
+ },
+ {
+  "code": "CHG",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:20:47.195866",
+  "name": "CHG",
+  "status_name": "Charge"
+ },
+ {
+  "code": "CRD",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:21:18.085728",
+  "name": "CRD",
+  "status_name": "Case Received"
+ },
+ {
+  "code": "CHD",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:22:46.611912",
+  "name": "CHD",
+  "status_name": "Notice Of Case hearing"
+ },
+ {
+  "code": "HRD",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:23:18.020359",
+  "name": "HRD",
+  "status_name": "Hearing Date"
+ },
+ {
+  "code": "RSAP",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:24:00.041604",
+  "name": "RSAP",
+  "status_name": "Resolution Approval"
+ },
+ {
+  "code": "NRM",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:24:35.429839",
+  "name": "NRM",
+  "status_name": "Normal Hearing"
+ },
+ {
+  "code": "HER",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:25:00.169783",
+  "name": "HER",
+  "status_name": "Hearing"
+ },
+ {
+  "code": "INCOMPL",
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Disciplinary Status",
+  "level": 1,
+  "modified": "2026-07-08 14:19:32.447779",
+  "name": "INCOMPL",
+  "status_name": "InProgress"
+ }
+]

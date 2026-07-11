@@ -1,0 +1,23 @@
+[
+ {
+  "category": "Gross offence (Gross Misconduct)",
+  "docstatus": 0,
+  "doctype": "Offence Category",
+  "modified": "2026-07-08 12:49:50.097175",
+  "name": "Gross offence (Gross Misconduct)"
+ },
+ {
+  "category": "MInor Offence (MIsconduct)",
+  "docstatus": 0,
+  "doctype": "Offence Category",
+  "modified": "2026-07-08 12:48:22.030673",
+  "name": "MInor Offence (MIsconduct)"
+ },
+ {
+  "category": "Serious offence (Major MIsconduct)",
+  "docstatus": 0,
+  "doctype": "Offence Category",
+  "modified": "2026-07-08 12:49:11.867361",
+  "name": "Serious offence (Major MIsconduct)"
+ }
+]
