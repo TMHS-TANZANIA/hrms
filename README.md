@@ -50,13 +50,68 @@ Initially, it was a set of modules within ERPNext but version 14 onwards, as the
 	<img src=".github/hrms-pwa.png"/>
 </details>
 
-   ps.remarks = doc.remark
-    ps.offence_category = doc.offence_category
-    ps.offences = doc.offence
-    ps.investigator_employee = doc.employees_name
-    ps.disciplinary_investigation = doc.name
-    ps.full_name = doc.name
-    ps.phone = doc.name
-    ps.email = doc.name
-    ps.department = doc.name
+
+### App Versions
+```
+{
+	"erpnext": "16.0.0-dev",
+	"frappe": "16.0.0-dev",
+	"hrms": "16.0.0-dev"
+}
+```
+### Route
+```
+Form/Disciplinary Charge/TMHS/CONS/0098-SH
+```
+### Traceback
+```
+Traceback (most recent call last):
+  File "apps/frappe/frappe/app.py", line 116, in application
+    response = frappe.api.handle(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "apps/frappe/frappe/api/__init__.py", line 49, in handle
+    data = endpoint(**arguments)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "apps/frappe/frappe/api/v1.py", line 36, in handle_rpc_call
+    return frappe.handler.handle()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "apps/frappe/frappe/handler.py", line 51, in handle
+    data = execute_cmd(cmd)
+           ^^^^^^^^^^^^^^^^
+  File "apps/frappe/frappe/handler.py", line 84, in execute_cmd
+    return frappe.call(method, **frappe.form_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "apps/frappe/frappe/__init__.py", line 1461, in call
+    return fn(*args, **newargs)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "apps/frappe/frappe/utils/typing_validations.py", line 32, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "apps/hrms/hrms/hr/doctype/disciplinary_charge/disciplinary_charge.py", line 90, in make_proceeding_step
+    disply_inv = frappe.get_all("Disciplinary Investigation",filters=[["disciplinary_charge",'=',doc.name]])
+                                                                                                 ^^^
+NameError: name 'doc' is not defined
+
+```
+### Request Data
+```
+{
+	"type": "POST",
+	"args": {
+		"displinary_charge_name": "TMHS/CONS/0098-SH"
+	},
+	"headers": {},
+	"error_handlers": {},
+	"url": "/api/method/hrms.hr.doctype.disciplinary_charge.disciplinary_charge.make_proceeding_step",
+	"request_id": null
+}
+```
+### Response Data
+```
+{
+	"exception": "NameError: name 'doc' is not defined",
+	"exc_type": "NameError",
+	"_exc_source": "hrms (app)"
+}
+```
 ```
