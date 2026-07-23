@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:DI-{MM}-{YY}-{###}",
  "creation": "2026-07-08 12:53:59.716034",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -88,10 +89,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-10 17:16:27.439456",
+ "modified": "2026-07-11 12:22:04.548887",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Disciplinary Investigation",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

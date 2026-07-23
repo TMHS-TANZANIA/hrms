@@ -7,10 +7,10 @@ from frappe.model.document import Document
 
 
 class ProceedingStep(Document):
-	def validate(self):
+	def on_submit(self):
 		if not self.action_date and not self.to and not self.comments:
 			frappe.throw("Please enter Action Date, To, and Comments")
-   
+
 		elif not self.action_date and not self.to:
 			frappe.throw("Please enter Action Date and To.")
 
@@ -28,6 +28,3 @@ class ProceedingStep(Document):
 
 		elif not self.comments:
 			frappe.throw("Please enter Comments.")
-   
-		
-  #End of if statement

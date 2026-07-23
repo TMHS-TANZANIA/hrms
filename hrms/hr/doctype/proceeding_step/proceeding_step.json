@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:PS-{MM}-{YY}-{###}",
  "creation": "2026-07-06 14:54:00.183256",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -31,7 +32,8 @@
   "to",
   "comments",
   "disciplinary_committee_column",
-  "disciplinary_committee"
+  "disciplinary_committee",
+  "amended_from"
  ],
  "fields": [
   {
@@ -204,15 +206,27 @@
    "options": "Disciplinary Offences",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Proceeding Step",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-07-10 19:35:45.412767",
+ "modified": "2026-07-11 12:22:16.675878",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Proceeding Step",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

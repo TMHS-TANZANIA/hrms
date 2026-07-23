@@ -39,7 +39,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-10 19:39:42.301492",
+ "modified": "2026-07-11 12:12:59.108727",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Disciplinary Commitee",
@@ -67,5 +67,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
