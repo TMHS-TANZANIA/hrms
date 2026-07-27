@@ -98,20 +98,16 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 				frm.clear_table("employees");
 				r.message.forEach((d) => {
 					let row = frm.add_child("employees");
-					const TAXABLE_INCOME = d.gross_amount - (d.has_nssf ? d.gross_amount * 0.1 : 0);
 					row.employee = d.employee;
 					row.employee_name = d.employee_name;
+					row.employee_number = d.id || d.employee;
 					row.base = flt(d.gross_amount) || 0;
 					row.variable = flt(d.variable) || 0;
 					row.has_nssf = d.has_nssf;
 					row.has_health_insurance = d.has_health_insurance;
 					row.has_heslb = d.has_heslb;
-					row.nssf = d.has_nssf ? flt(d.gross_amount * 0.1) : 0;
-					row.heslb = d.has_heslb ? flt(d.gross_amount * 0.15) : 0;
-					row.paye = flt(paye_calculator(TAXABLE_INCOME));
-					row.nhif = d.has_health_insurance ? flt(d.gross_amount * 0.03) : 0;
 				});
-				frm.refresh_field("employees");
+				// calculate_totals fills in nssf/nhif/heslb/paye/taxable_income/total_deductions
 				frm.trigger("calculate_totals");
 				frappe.msgprint(__("Employees fetched successfully."));
 			} else {
@@ -129,12 +125,21 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		let total_nssf = 0;
 		let total_variable = 0;
 		let total_paye = 0;
+		let total_company_nhif = 0;
+		let total_company_nssf = 0;
+		let grand_total_net_salary = 0;
+		let total_sdl = 0;
+		let total_wcf = 0;
 		frm.doc.employees.forEach((row) => {
 			total_base += flt(row.base);
+			total_sdl += flt(row.base) * 0.035;
+			total_wcf += flt(row.base) * 0.005;
 			total_variable += flt(row.variable);
 			if (row.has_health_insurance) {
 				total_nhif += flt(row.base) * 0.03;
 				row.nhif = flt(row.base) * 0.03;
+				// Let take the maximum of 3% if the employee + company contribution is less than 40000, then the company will pay the remaining amount to make it 40000. To Ensure the contribution of the employee is always atleast 40k
+				total_company_nhif += Math.max(flt(row.base) * 0.03, 40000 - (flt(row.base) * 0.03));
 			}
 			else {
 				row.nhif = 0;
@@ -149,22 +154,40 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			if (row.has_nssf) {
 				total_nssf += flt(row.base) * 0.1;
 				row.nssf = flt(row.base) * 0.1;
+				total_company_nssf += flt(row.base) * 0.1;
 			}
 			else {
 				row.nssf = 0;
 			}
-			paye = paye_calculator(flt(row.base) - flt(row.nssf));
+
+			row.taxable_income = flt(flt(row.base) - flt(row.nssf));
+			paye = paye_calculator(row.taxable_income);
 			row.paye = flt(paye);
-			let net_salary = flt(flt(row.base || 0) - flt(row.nssf || 0) - flt(row.paye || 0) - flt(row.nhif || 0) - flt(row.heslb || 0))
+			row.total_deductions = flt(flt(row.nssf) + flt(row.nhif) + flt(row.heslb) + flt(row.paye));
+			let net_salary = flt(flt(row.base) - flt(row.total_deductions));
 			row.net_salary = flt(net_salary);
+			grand_total_net_salary += flt(net_salary);
 			total_paye += paye;
 		});
+		frm.refresh_field("employees");
 		frm.set_value("total_base", total_base);
 		frm.set_value("total_nhif", total_nhif);
 		frm.set_value("total_heslb", total_heslb);
 		frm.set_value("total_nssf", total_nssf);
 		frm.set_value("total_variable", total_variable);
 		frm.set_value("total_paye", total_paye);
+
+		// Company Contributions
+		frm.set_value("total_company_nhif", total_company_nhif);
+		frm.set_value("total_company_nssf", total_company_nssf);
+		frm.set_value("total_sdl", total_sdl);
+		frm.set_value("total_wcf", total_wcf);
+		// Set Grand Totals
+		frm.set_value("grand_total_gross", total_base);
+		frm.set_value("grand_total_nhif", total_nhif+total_company_nhif);
+		frm.set_value("grand_total_nssf", total_nssf+total_company_nssf);
+		frm.set_value("grand_total_net_salary", grand_total_net_salary);
+
 	},
 
 	create_payroll_entry(frm) {
@@ -214,6 +237,7 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 			}).then((r) => {
 				if (r.message) {
 					row.employee_name = r.message.employee_name;
+					row.employee_number = r.message.id;
 					row.base = flt(r.message.gross_amount);
 					row.variable = flt(r.message.variable);
 					row.has_nssf = r.message.has_nssf;
@@ -221,11 +245,12 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 					row.has_heslb = r.message.has_heslb;
 					row.nssf = row.has_nssf ? flt(row.base * 0.1) : 0;
 					row.heslb = row.has_heslb ? flt(row.base * 0.15) : 0;
-					const TAXABLE_INCOME = flt(row.base) - flt(row.nssf);
-					row.paye = flt(paye_calculator(TAXABLE_INCOME));
 					row.nhif = row.has_health_insurance ? flt(row.base * 0.03) : 0;
-					let net_salary = flt(flt(row.base || 0) - flt(row.nssf || 0) - flt(row.paye || 0) - flt(row.nhif || 0) - flt(row.heslb || 0))
-					row.net_salary = flt(net_salary);
+					const TAXABLE_INCOME = flt(row.base) - flt(row.nssf);
+					row.taxable_income = TAXABLE_INCOME;
+					row.paye = flt(paye_calculator(TAXABLE_INCOME));
+					row.total_deductions = flt(flt(row.nssf) + flt(row.paye) + flt(row.nhif) + flt(row.heslb));
+					row.net_salary = flt(flt(row.base) - flt(row.total_deductions));
 					frm.refresh_field("employees");
 					frm.trigger("calculate_totals");
 				}

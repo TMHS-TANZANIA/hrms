@@ -2,6 +2,92 @@
  {
   "docstatus": 0,
   "doctype": "Workflow",
+  "document_type": "Bulk Salary Assignment",
+  "is_active": 1,
+  "modified": "2026-07-27 12:50:26.312864",
+  "name": "Bulk Salary Assignment",
+  "override_status": 0,
+  "send_email_alert": 1,
+  "states": [
+   {
+    "allow_edit": "HR Manager",
+    "avoid_status_override": 0,
+    "doc_status": "0",
+    "is_optional_state": 0,
+    "message": null,
+    "next_action_email_template": "Bulk Salary Assignment",
+    "send_email": 1,
+    "state": "Draft",
+    "update_field": null,
+    "update_value": null,
+    "workflow_builder_id": null
+   },
+   {
+    "allow_edit": "Accounts Manager",
+    "avoid_status_override": 0,
+    "doc_status": "0",
+    "is_optional_state": 0,
+    "message": null,
+    "next_action_email_template": "Bulk Salary Assignment",
+    "send_email": 1,
+    "state": "Pending",
+    "update_field": null,
+    "update_value": null,
+    "workflow_builder_id": null
+   },
+   {
+    "allow_edit": "System Manager",
+    "avoid_status_override": 0,
+    "doc_status": "1",
+    "is_optional_state": 0,
+    "message": null,
+    "next_action_email_template": null,
+    "send_email": 1,
+    "state": "Approved",
+    "update_field": null,
+    "update_value": null,
+    "workflow_builder_id": null
+   }
+  ],
+  "transitions": [
+   {
+    "action": "Send for Approval",
+    "allow_self_approval": 1,
+    "allowed": "HR Manager",
+    "condition": null,
+    "next_state": "Pending",
+    "send_email_to_creator": 0,
+    "state": "Draft",
+    "workflow_builder_id": null
+   },
+   {
+    "action": "Review",
+    "allow_self_approval": 1,
+    "allowed": "Accounts Manager",
+    "condition": null,
+    "next_state": "Approved",
+    "send_email_to_creator": 0,
+    "state": "Pending",
+    "workflow_builder_id": null
+   },
+   {
+    "action": "Return to Draft",
+    "allow_self_approval": 1,
+    "allowed": "Accounts Manager",
+    "condition": null,
+    "next_state": "Draft",
+    "send_email_to_creator": 0,
+    "state": "Pending",
+    "workflow_builder_id": null
+   }
+  ],
+  "workflow_data": null,
+  "workflow_name": "Bulk Salary Assignment",
+  "workflow_state_field": "workflow_state"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow",
   "document_type": "Gross Salary History",
   "is_active": 1,
   "modified": "2026-06-27 04:25:30.585786",
@@ -185,7 +271,7 @@
   "doctype": "Workflow",
   "document_type": "Payroll Entry",
   "is_active": 1,
-  "modified": "2026-06-29 13:46:02.017895",
+  "modified": "2026-07-27 13:02:06.953371",
   "name": "PAYROLL-T",
   "override_status": 0,
   "send_email_alert": 1,
@@ -224,7 +310,7 @@
     "message": null,
     "next_action_email_template": "Payroll Entry",
     "send_email": 1,
-    "state": "Waiting for Direcotr",
+    "state": "Waiting for Director",
     "update_field": null,
     "update_value": null,
     "workflow_builder_id": null
@@ -272,7 +358,7 @@
     "allow_self_approval": 1,
     "allowed": "HR Manager",
     "condition": null,
-    "next_state": "Waiting for Direcotr",
+    "next_state": "Waiting for Director",
     "send_email_to_creator": 0,
     "state": "Waiting for HR Review",
     "workflow_builder_id": null
@@ -283,7 +369,7 @@
     "allowed": "HR Manager",
     "condition": null,
     "next_state": "Draft",
-    "send_email_to_creator": 0,
+    "send_email_to_creator": 1,
     "state": "Waiting for HR Review",
     "workflow_builder_id": null
    },
@@ -294,7 +380,7 @@
     "condition": null,
     "next_state": "Approved",
     "send_email_to_creator": 1,
-    "state": "Waiting for Direcotr",
+    "state": "Waiting for Director",
     "workflow_builder_id": null
    },
    {
@@ -304,7 +390,7 @@
     "condition": null,
     "next_state": "Rejected",
     "send_email_to_creator": 1,
-    "state": "Waiting for Direcotr",
+    "state": "Waiting for Director",
     "workflow_builder_id": null
    },
    {
@@ -314,7 +400,7 @@
     "condition": null,
     "next_state": "Draft",
     "send_email_to_creator": 1,
-    "state": "Waiting for Direcotr",
+    "state": "Waiting for Director",
     "workflow_builder_id": null
    }
   ],

@@ -63,9 +63,6 @@ frappe.ui.form.on("Payroll Entry", {
 
 	refresh: (frm) => {
 		if (frm.doc.status === "Queued") frm.page.btn_secondary.hide();
-		frm.add_custom_button(__("Generate Cost to Company"), function () {
-			frappe.msgprint("We are working on this feature. It will be available in the next release.");
-		});
 		if (frm.doc.salary_slips_created) {
 			frm.add_custom_button(__("Refresh Summary"), function () {
 				frm.call({

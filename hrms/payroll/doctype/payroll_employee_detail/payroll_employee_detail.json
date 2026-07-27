@@ -12,6 +12,8 @@
   "nhif",
   "heslb",
   "paye",
+  "taxable_income",
+  "total_deductions",
   "net_salary",
   "column_break_3",
   "department",
@@ -102,11 +104,25 @@
    "in_list_view": 1,
    "label": "Gross",
    "read_only": 1
+  },
+  {
+   "fieldname": "taxable_income",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Taxable Income",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_deductions",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Deductions",
+   "read_only": 1
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-06-27 08:40:51.916255",
+ "modified": "2026-06-30 14:14:10.335630",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Employee Detail",

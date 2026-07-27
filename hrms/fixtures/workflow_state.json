@@ -3,6 +3,60 @@
   "docstatus": 0,
   "doctype": "Workflow State",
   "icon": "",
+  "modified": "2026-01-24 19:04:30.905013",
+  "name": "Signed",
+  "style": "Success",
+  "workflow_state_name": "Signed"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-01-24 19:04:38.364020",
+  "name": "Sent for Signature",
+  "style": "Warning",
+  "workflow_state_name": "Sent for Signature"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "time",
+  "modified": "2026-06-29 10:06:30.263618",
+  "name": "Waiting for Approval",
+  "style": "Warning",
+  "workflow_state_name": "Waiting for Approval"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-06-29 10:06:30.261527",
+  "name": "Draft",
+  "style": "",
+  "workflow_state_name": "Draft"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "remove",
+  "modified": "2026-06-29 10:06:30.284059",
+  "name": "Rejected",
+  "style": "Danger",
+  "workflow_state_name": "Rejected"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-07-27 12:56:48.280915",
+  "name": "Waiting for Director",
+  "style": "",
+  "workflow_state_name": "Waiting for Director"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
   "modified": "2026-06-29 13:30:38.095812",
   "name": "Waiting for HR Review",
   "style": "",
@@ -11,10 +65,19 @@
  {
   "docstatus": 0,
   "doctype": "Workflow State",
-  "icon": "",
-  "modified": "2026-06-29 13:31:00.320565",
-  "name": "Waiting for Direcotr",
+  "icon": "ok-sign",
+  "modified": "2026-06-29 10:06:30.270028",
+  "name": "Approved",
+  "style": "Success",
+  "workflow_state_name": "Approved"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "question-sign",
+  "modified": "2026-06-24 17:21:11.628044",
+  "name": "Pending",
   "style": "",
-  "workflow_state_name": "Waiting for Direcotr"
+  "workflow_state_name": "Pending"
  }
 ]

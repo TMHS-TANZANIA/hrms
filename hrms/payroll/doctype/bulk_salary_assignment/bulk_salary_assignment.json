@@ -16,6 +16,7 @@
   "company",
   "payroll_payable_account",
   "currency",
+  "amended_from",
   "quick_filters_section",
   "branch",
   "department",
@@ -27,6 +28,12 @@
   "filter_list",
   "select_employees_section",
   "employees",
+  "grand_total_summary_section",
+  "grand_total_nssf",
+  "grand_total_gross",
+  "column_break_udwi",
+  "grand_total_nhif",
+  "grand_total_net_salary",
   "summary_section",
   "total_base",
   "total_nhif",
@@ -35,7 +42,12 @@
   "total_variable",
   "total_heslb",
   "total_paye",
-  "amended_from"
+  "summary_for_cost_to_the_company_section",
+  "total_company_nssf",
+  "total_company_nhif",
+  "column_break_hoei",
+  "total_sdl",
+  "total_wcf"
  ],
  "fields": [
   {
@@ -44,6 +56,7 @@
    "label": "Set Assignment Details"
   },
   {
+   "default": "Default Salary Structure",
    "fieldname": "salary_structure",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -64,7 +77,8 @@
    "fieldtype": "Link",
    "hidden": 1,
    "label": "Income Tax Slab",
-   "options": "Income Tax Slab"
+   "options": "Income Tax Slab",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_rsep",
@@ -160,7 +174,7 @@
   {
    "fieldname": "summary_section",
    "fieldtype": "Section Break",
-   "label": "Summary"
+   "label": "Employee Totals Summary"
   },
   {
    "fieldname": "total_base",
@@ -176,7 +190,7 @@
   {
    "fieldname": "total_variable",
    "fieldtype": "Currency",
-   "label": "Total Variable",
+   "label": "Total Allowances",
    "options": "currency",
    "read_only": 1
   },
@@ -224,6 +238,72 @@
    "label": "Total PAYE",
    "options": "currency",
    "read_only": 1
+  },
+  {
+   "fieldname": "summary_for_cost_to_the_company_section",
+   "fieldtype": "Section Break",
+   "label": "Cost to the Company Summary"
+  },
+  {
+   "fieldname": "total_company_nssf",
+   "fieldtype": "Currency",
+   "label": "Total Company NSSF",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_company_nhif",
+   "fieldtype": "Currency",
+   "label": "Total Company NHIF",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hoei",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_wcf",
+   "fieldtype": "Currency",
+   "label": "Total WCF",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_sdl",
+   "fieldtype": "Currency",
+   "label": "Total SDL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_total_nssf",
+   "fieldtype": "Currency",
+   "label": "Grand Total NSSF(Company + Employee)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_total_nhif",
+   "fieldtype": "Currency",
+   "label": "Grand Total NHIF(Company + Employee)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_total_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Grand Total Summary"
+  },
+  {
+   "fieldname": "grand_total_gross",
+   "fieldtype": "Currency",
+   "label": "Grand Total Gross Salary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_udwi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grand_total_net_salary",
+   "fieldtype": "Currency",
+   "label": "Grand Total Net Salary",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
@@ -234,7 +314,7 @@
    "link_fieldname": "bulk_salary_assignment"
   }
  ],
- "modified": "2026-06-27 08:47:27.783409",
+ "modified": "2026-07-07 18:53:27.472144",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",

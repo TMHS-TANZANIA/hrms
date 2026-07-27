@@ -82,7 +82,7 @@ class PayrollEntry(Document):
 				(ss.payroll_entry == self.name)
 				& (ss.docstatus != 2)
 				& (ssd.parentfield == "deductions")
-				& (ssd.salary_component.like("%NSSF%"))
+				& (ssd.salary_component.like("NSSF"))
 			)
 		).run(as_dict=True)
 

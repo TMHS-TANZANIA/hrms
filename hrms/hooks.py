@@ -382,24 +382,19 @@ fixtures = [
 	# {"doctype": "Print Format", "name": "Salary Slip"},
 	# "Salary Structure",
 	# "Workspace",
+	# Approval workflows. Order matters: a Workflow references its states, its actions and
+	# the email template on each state, so those masters have to be imported first.
 	# {
-    #     "dt": "Workflow",
-    #     "filters": [["name", "in", ["PAYROLL-T","Gross Salary History"]]] # Replace with your workflow name
-    # },
-    # {
-    #     "dt": "Workflow Transition",
-    #     "filters": [["name", "in", ["Waiting for HR Review","Waiting for Direcotr"]]] # Replace with your workflow transition name
-    # },
-    # {
-    #     "dt": "Workflow State",
-    #     "filters": [["name", "in", ["Waiting for HR Review","Waiting for Direcotr"]]] # Replace with your workflow state name
-    # },
-    # {
-    #     "dt": "Workflow Action",
-    #     "filters": [["name", "in", ["Return to Draft","Review"]]] # Replace with your workflow action name
-    # },
-    # {
-    #     "dt": "Email Template",
-    #     "filters": [["name", "in", ["Payroll Entry"]]] # Replace with your template name
-    # }
+	# 	"dt": "Email Template",
+	# 	"filters": [["name", "in", ["Payroll Entry", "Bulk Salary Assignment"]]],
+	# },
+	# Both masters are small and exported whole so no transition can point at a missing
+	# record. Note these are the *masters* - "Workflow Action" is the transactional
+	# doctype holding live pending approvals and must never be exported as a fixture.
+	{"dt": "Workflow State"},
+	{"dt": "Workflow Action Master"},
+	{
+		"dt": "Workflow",
+		"filters": [["name", "in", ["PAYROLL-T", "Bulk Salary Assignment", "Gross Salary History"]]],
+	},
 ]
