@@ -365,36 +365,4 @@ company_data_to_be_ignored = [
 	"Employee Separation Template",
 ]
 fixtures = [
-    # {
-	# 	"dt":"Disciplinary Offences",
-	# },
-    # {
-	# 	"dt":"Disciplinary Penalties",
-	# },
-    # {
-	# 	"dt":"Disciplinary Status",
-	# },
-    # {
-	# 	"dt":"Offence Category",
-	# },
-	# "Salary Component",
-	# Export the salary slip print format
-	# {"doctype": "Print Format", "name": "Salary Slip"},
-	# "Salary Structure",
-	# "Workspace",
-	# Approval workflows. Order matters: a Workflow references its states, its actions and
-	# the email template on each state, so those masters have to be imported first.
-	# {
-	# 	"dt": "Email Template",
-	# 	"filters": [["name", "in", ["Payroll Entry", "Bulk Salary Assignment"]]],
-	# },
-	# Both masters are small and exported whole so no transition can point at a missing
-	# record. Note these are the *masters* - "Workflow Action" is the transactional
-	# doctype holding live pending approvals and must never be exported as a fixture.
-	{"dt": "Workflow State"},
-	{"dt": "Workflow Action Master"},
-	{
-		"dt": "Workflow",
-		"filters": [["name", "in", ["PAYROLL-T", "Bulk Salary Assignment", "Gross Salary History"]]],
-	},
-]
+    ]
