@@ -157,7 +157,9 @@ class BulkSalaryAssignment(Document):
 				Employee.grade,
 				Employee.has_nssf,
 				Employee.has_health_insurance,
-				Employee.has_helsb,
+				# the Employee field is spelled "helsb"; alias it so the client gets the
+				# same "has_heslb" key that the child table and get_employee_details use
+				Employee.has_helsb.as_("has_heslb"),
 				Employee.gross_amount,
 			],
 			filters=filters,
