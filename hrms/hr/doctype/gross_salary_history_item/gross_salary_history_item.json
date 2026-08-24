@@ -6,16 +6,32 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "gross_salary_history",
+  "status",
   "gross_amount",
   "approver",
   "approver_name",
   "approved_at",
   "requester",
   "requester_name",
-  "requested_at",
-  "gross_salary_history"
+  "requested_at"
  ],
  "fields": [
+  {
+   "fieldname": "gross_salary_history",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Reference",
+   "options": "Gross Salary History",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Status",
+   "read_only": 1
+  },
   {
    "fieldname": "gross_amount",
    "fieldtype": "Currency",
@@ -43,8 +59,7 @@
    "fieldname": "approved_at",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Approved At",
-   "reqd": 1
+   "label": "Approved At"
   },
   {
    "fieldname": "requester",
@@ -67,13 +82,6 @@
    "in_list_view": 1,
    "label": "Requested At",
    "reqd": 1
-  },
-  {
-   "fieldname": "gross_salary_history",
-   "fieldtype": "Link",
-   "label": "Approved Document",
-   "options": "Gross Salary History",
-   "read_only": 1
   }
  ],
  "grid_page_length": 50,

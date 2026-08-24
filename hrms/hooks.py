@@ -365,4 +365,6 @@ company_data_to_be_ignored = [
 	"Employee Separation Template",
 ]
 fixtures = [
-    ]
+	{"dt":"Salary Structure", "filters":[["name","=","Default Salary Structure"]]},
+	 "Salary Component",
+]
