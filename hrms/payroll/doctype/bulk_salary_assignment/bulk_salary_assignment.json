@@ -314,7 +314,7 @@
    "link_fieldname": "bulk_salary_assignment"
   }
  ],
- "modified": "2026-07-07 18:53:27.472144",
+ "modified": "2026-08-28 15:30:35.613447",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",
@@ -337,15 +337,14 @@
    "write": 1
   },
   {
-   "create": 1,
    "email": 1,
+   "export": 1,
    "print": 1,
    "read": 1,
-   "role": "HR User",
+   "report": 1,
+   "role": "Accounts Manager",
    "select": 1,
-   "share": 1,
-   "submit": 1,
-   "write": 1
+   "share": 1
   }
  ],
  "protect_attached_files": 1,

@@ -544,7 +544,7 @@
    "link_fieldname": "payroll_entry"
   }
  ],
- "modified": "2026-07-02 15:51:15.256616",
+ "modified": "2026-08-28 15:32:48.821800",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Entry",
@@ -558,6 +558,22 @@
    "read": 1,
    "report": 1,
    "role": "HR Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "select": 1,
    "share": 1,
    "submit": 1,
    "write": 1
