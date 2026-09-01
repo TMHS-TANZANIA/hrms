@@ -3,7 +3,7 @@
  "allow_copy": 1,
  "allow_rename": 1,
  "autoname": "field:title",
- "creation": "2025-12-18 18:20:29.645717",
+ "creation": "2026-09-01 06:46:54.554162",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -11,12 +11,15 @@
   "title",
   "salary_structure",
   "from_date",
+  "to_date",
+  "total_working_days",
   "income_tax_slab",
   "column_break_rsep",
   "company",
   "payroll_payable_account",
   "currency",
   "amended_from",
+  "days_in_month",
   "quick_filters_section",
   "branch",
   "department",
@@ -42,6 +45,9 @@
   "total_variable",
   "total_heslb",
   "total_paye",
+  "total_child_support",
+  "total_other_deductions",
+  "total_deductions",
   "summary_for_cost_to_the_company_section",
   "total_company_nssf",
   "total_company_nhif",
@@ -65,6 +71,7 @@
    "reqd": 1
   },
   {
+   "description": "First day paid for, and the Salary Structure Assignment start date.",
    "fieldname": "from_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -304,6 +311,44 @@
    "fieldtype": "Currency",
    "label": "Grand Total Net Salary",
    "read_only": 1
+  },
+  {
+   "description": "Calendar days between From Date and To Date, both included.",
+   "fieldname": "total_working_days",
+   "fieldtype": "Int",
+   "label": "Total Working Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_child_support",
+   "fieldtype": "Currency",
+   "label": "Total Child Support",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_other_deductions",
+   "fieldtype": "Currency",
+   "label": "Total Other Deductions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_deductions",
+   "fieldtype": "Currency",
+   "label": "Total Deductions",
+   "read_only": 1
+  },
+  {
+   "description": "Last day paid for. Defaults to the end of the month. Set it earlier to pay part of a month.",
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "description": "Calendar days in the month of From Date. The gross is divided by this.",
+   "fieldname": "days_in_month",
+   "fieldtype": "Int",
+   "label": "Days in Month",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
@@ -314,12 +359,12 @@
    "link_fieldname": "bulk_salary_assignment"
   }
  ],
- "modified": "2026-08-28 15:30:35.613447",
+ "modified": "2026-09-01 06:50:32.869916",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",
  "naming_rule": "By fieldname",
- "owner": "james@example.com",
+ "owner": "Administrator",
  "permissions": [
   {
    "cancel": 1,

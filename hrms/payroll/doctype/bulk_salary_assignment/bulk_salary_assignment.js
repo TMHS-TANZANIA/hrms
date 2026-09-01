@@ -5,20 +5,39 @@ function paye_calculator(TAXABLE_INCOME) {
 	if (TAXABLE_INCOME < 270000) {
 		paye = 0;
 	}
+	// rounded to whole shillings to match the Salary Structure's PAYE formula
 	else if (TAXABLE_INCOME < 520000) {
-		paye = flt(0.08 * (TAXABLE_INCOME - 270000));
+		paye = flt(Math.round(0.08 * (TAXABLE_INCOME - 270000)));
 	}
 	else if (TAXABLE_INCOME < 760000) {
-		paye = flt(20000 + (0.2 * (TAXABLE_INCOME - 520000)))
+		paye = flt(Math.round(20000 + (0.2 * (TAXABLE_INCOME - 520000))))
 	}
 	else if (TAXABLE_INCOME < 1000000) {
-		paye = flt(68000 + (0.25 * (TAXABLE_INCOME - 760000)))
+		paye = flt(Math.round(68000 + (0.25 * (TAXABLE_INCOME - 760000))))
 	}
 	else {
-		paye = flt(128000 + (0.3 * (TAXABLE_INCOME - 1000000)))
+		paye = flt(Math.round(128000 + (0.3 * (TAXABLE_INCOME - 1000000))))
 	}
 	return paye;
 }
+// the employee's own health insurance setting; a fixed amount beats a percentage,
+// neither set falls back to NHIF at 3%
+function health_insurance(row) {
+	if (!row.has_health_insurance) return 0;
+	if (flt(row.health_insurance_amount)) return flt(row.health_insurance_amount);
+	const rate = flt(row.health_insurance_percentage) / 100 || 0.03;
+	return flt(flt(row.base) * rate);
+}
+
+// calendar day proration: a joiner on the 15th of a 30 day month earns 16/30 of gross
+function prorate(frm, row) {
+	const divisor = cint(frm.doc.days_in_month);
+	row.base = divisor ? flt(flt(row.monthly_gross) * cint(row.payable_days) / divisor) : 0;
+}
+
+// mirrors PAYE_EMPLOYMENT_TYPES and the PAYE condition on the Salary Structure
+const PAYE_EMPLOYMENT_TYPES = ["Employment"];
+
 frappe.ui.form.on("Bulk Salary Assignment", {
 	setup(frm) {
 		frm.trigger("set_queries");
@@ -26,6 +45,18 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 	},
 	async refresh(frm) {
 		frm.page.clear_indicator();
+		// the queued path reports its failures here; without this they are invisible and
+		// only surface later as "no salary structure" on the Payroll Entry
+		frappe.realtime.on("completed_bulk_salary_structure_assignment", (data) => {
+			if (data.failure && data.failure.length)
+				frappe.msgprint({
+					title: __("Assignment Failed"),
+					indicator: "red",
+					message: __("Could not create a Salary Structure Assignment for: {0}", [
+						frappe.utils.comma_and(data.failure),
+					]),
+				});
+		});
 		await frm.trigger("set_payroll_payable_account");
 
 		if (frm.doc.docstatus === 0) {
@@ -73,6 +104,41 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			};
 		});
 	},
+	from_date(frm) {
+		// default to the whole month; HR narrows To Date to pay part of one
+		if (frm.doc.from_date && !frm.doc.to_date)
+			frm.set_value("to_date", moment(frm.doc.from_date).endOf("month").format("YYYY-MM-DD"));
+		frm.trigger("set_working_days");
+	},
+
+	to_date(frm) {
+		frm.trigger("set_working_days");
+	},
+
+	set_working_days(frm) {
+		if (!frm.doc.from_date) return;
+		// an empty To Date means the whole month, the same default the server applies
+		const end = frm.doc.to_date
+			? moment(frm.doc.to_date)
+			: moment(frm.doc.from_date).endOf("month");
+		const days = end.diff(moment(frm.doc.from_date), "days") + 1;
+		frm.set_value("total_working_days", Math.max(days, 0));
+		// but the gross is always divided by the whole month, or a half month run would
+		// divide 15 days by 15 and pay out a full month
+		frm.set_value(
+			"days_in_month",
+			frm.doc.from_date ? moment(frm.doc.from_date).daysInMonth() : 0
+		);
+		// payable_days are per employee and come from the server, so narrowing the period
+		// needs a re-fetch to be exact; this keeps the visible numbers honest until then
+		(frm.doc.employees || []).forEach((row) => {
+			row.payable_days = Math.min(cint(row.payable_days), cint(frm.doc.total_working_days));
+			prorate(frm, row);
+		});
+		frm.refresh_field("employees");
+		frm.trigger("calculate_totals");
+	},
+
 	set_payroll_payable_account(frm) {
 		if (frm.doc.company) {
 			frappe.db.get_value("Company", frm.doc.company, "default_payroll_payable_account", (r) => {
@@ -95,13 +161,21 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			doc: frm.doc,
 		}).then((r) => {
 			if (r.message && r.message.length) {
+				frm.trigger("set_working_days");
 				frm.clear_table("employees");
 				r.message.forEach((d) => {
 					let row = frm.add_child("employees");
 					row.employee = d.employee;
 					row.employee_name = d.employee_name;
 					row.employee_number = d.id || d.employee;
-					row.base = flt(d.gross_amount) || 0;
+					row.monthly_gross = flt(d.gross_amount) || 0;
+					row.payable_days = cint(d.payable_days);
+					prorate(frm, row);
+					row.child_support = flt(d.child_support);
+					row.other_deduction = flt(d.other_deduction);
+					row.health_insurance_amount = flt(d.health_insurance_amount);
+					row.health_insurance_percentage = cint(d.health_insurance_percentage);
+					row.employment_type = d.employment_type;
 					row.variable = flt(d.variable) || 0;
 					row.has_nssf = d.has_nssf;
 					row.has_health_insurance = d.has_health_insurance;
@@ -130,19 +204,19 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		let grand_total_net_salary = 0;
 		let total_sdl = 0;
 		let total_wcf = 0;
+		let total_child_support = 0;
+		let total_other_deductions = 0;
+		let total_deductions = 0;
 		frm.doc.employees.forEach((row) => {
 			total_base += flt(row.base);
 			total_sdl += flt(row.base) * 0.035;
 			total_wcf += flt(row.base) * 0.005;
 			total_variable += flt(row.variable);
+			row.nhif = health_insurance(row);
 			if (row.has_health_insurance) {
-				total_nhif += flt(row.base) * 0.03;
-				row.nhif = flt(row.base) * 0.03;
+				total_nhif += row.nhif;
 				// Let take the maximum of 3% if the employee + company contribution is less than 40000, then the company will pay the remaining amount to make it 40000. To Ensure the contribution of the employee is always atleast 40k
-				total_company_nhif += Math.max(flt(row.base) * 0.03, 40000 - (flt(row.base) * 0.03));
-			}
-			else {
-				row.nhif = 0;
+				total_company_nhif += Math.max(row.nhif, 40000 - row.nhif);
 			}
 			if (row.has_heslb) {
 				total_heslb += flt(row.base) * 0.15;
@@ -161,13 +235,18 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			}
 
 			row.taxable_income = flt(flt(row.base) - flt(row.nssf));
-			paye = paye_calculator(row.taxable_income);
+			paye = PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)
+				? paye_calculator(row.taxable_income)
+				: 0;
 			row.paye = flt(paye);
-			row.total_deductions = flt(flt(row.nssf) + flt(row.nhif) + flt(row.heslb) + flt(row.paye));
+			row.total_deductions = flt(flt(row.nssf) + flt(row.nhif) + flt(row.heslb) + flt(row.paye) + flt(row.child_support) + flt(row.other_deduction));
 			let net_salary = flt(flt(row.base) - flt(row.total_deductions));
 			row.net_salary = flt(net_salary);
 			grand_total_net_salary += flt(net_salary);
 			total_paye += paye;
+			total_child_support += flt(row.child_support);
+			total_other_deductions += flt(row.other_deduction);
+			total_deductions += flt(row.total_deductions);
 		});
 		frm.refresh_field("employees");
 		frm.set_value("total_base", total_base);
@@ -176,6 +255,9 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		frm.set_value("total_nssf", total_nssf);
 		frm.set_value("total_variable", total_variable);
 		frm.set_value("total_paye", total_paye);
+		frm.set_value("total_child_support", total_child_support);
+		frm.set_value("total_other_deductions", total_other_deductions);
+		frm.set_value("total_deductions", total_deductions);
 
 		// Company Contributions
 		frm.set_value("total_company_nhif", total_company_nhif);
@@ -238,18 +320,27 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 				if (r.message) {
 					row.employee_name = r.message.employee_name;
 					row.employee_number = r.message.id;
-					row.base = flt(r.message.gross_amount);
+					row.monthly_gross = flt(r.message.gross_amount);
+					row.payable_days = cint(r.message.payable_days);
+					prorate(frm, row);
+					row.child_support = flt(r.message.child_support);
+					row.other_deduction = flt(r.message.other_deduction);
+					row.health_insurance_amount = flt(r.message.health_insurance_amount);
+					row.health_insurance_percentage = cint(r.message.health_insurance_percentage);
+					row.employment_type = r.message.employment_type;
 					row.variable = flt(r.message.variable);
 					row.has_nssf = r.message.has_nssf;
 					row.has_health_insurance = r.message.has_health_insurance;
 					row.has_heslb = r.message.has_heslb;
 					row.nssf = row.has_nssf ? flt(row.base * 0.1) : 0;
 					row.heslb = row.has_heslb ? flt(row.base * 0.15) : 0;
-					row.nhif = row.has_health_insurance ? flt(row.base * 0.03) : 0;
+					row.nhif = health_insurance(row);
 					const TAXABLE_INCOME = flt(row.base) - flt(row.nssf);
 					row.taxable_income = TAXABLE_INCOME;
-					row.paye = flt(paye_calculator(TAXABLE_INCOME));
-					row.total_deductions = flt(flt(row.nssf) + flt(row.paye) + flt(row.nhif) + flt(row.heslb));
+					row.paye = PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)
+						? flt(paye_calculator(TAXABLE_INCOME))
+						: 0;
+					row.total_deductions = flt(flt(row.nssf) + flt(row.paye) + flt(row.nhif) + flt(row.heslb) + flt(row.child_support) + flt(row.other_deduction));
 					row.net_salary = flt(flt(row.base) - flt(row.total_deductions));
 					frm.refresh_field("employees");
 					frm.trigger("calculate_totals");

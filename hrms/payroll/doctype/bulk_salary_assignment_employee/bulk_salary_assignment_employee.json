@@ -9,18 +9,25 @@
   "employee_number",
   "employee",
   "employee_name",
+  "monthly_gross",
+  "payable_days",
   "base",
   "variable",
   "taxable_income",
   "nssf",
   "nhif",
   "heslb",
+  "employment_type",
   "paye",
+  "child_support",
+  "other_deduction",
   "total_deductions",
   "net_salary",
   "has_heslb",
   "has_nssf",
-  "has_health_insurance"
+  "has_health_insurance",
+  "health_insurance_amount",
+  "health_insurance_percentage"
  ],
  "fields": [
   {
@@ -43,7 +50,7 @@
    "fieldname": "base",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Basic",
+   "label": "Payable Gross",
    "read_only": 1
   },
   {
@@ -130,6 +137,60 @@
    "label": "ID",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "monthly_gross",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Monthly Gross",
+   "read_only": 1
+  },
+  {
+   "description": "Calendar days the employee is engaged for within the month",
+   "fieldname": "payable_days",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Payable Days",
+   "read_only": 1
+  },
+  {
+   "description": "Employee > Other Deductions > Child Support Amount",
+   "fieldname": "child_support",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Child Support",
+   "read_only": 1
+  },
+  {
+   "description": "Employee > Other Deductions > Deduction",
+   "fieldname": "other_deduction",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Other Deduction",
+   "read_only": 1
+  },
+  {
+   "description": "Fixed amount from the Employee record. Overrides the percentage when set.",
+   "fieldname": "health_insurance_amount",
+   "fieldtype": "Currency",
+   "label": "Health Insurance (Fixed)",
+   "read_only": 1
+  },
+  {
+   "description": "From the Employee record. Defaults to 3% when not set.",
+   "fieldname": "health_insurance_percentage",
+   "fieldtype": "Int",
+   "label": "Health Insurance %",
+   "read_only": 1
+  },
+  {
+   "description": "PAYE is only charged on employment types configured for it.",
+   "fieldname": "employment_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employment Type",
+   "options": "Employment Type",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
