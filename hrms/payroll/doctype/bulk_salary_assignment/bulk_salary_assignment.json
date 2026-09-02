@@ -173,6 +173,7 @@
    "label": "Select Employees"
   },
   {
+   "allow_bulk_edit": 1,
    "fieldname": "employees",
    "fieldtype": "Table",
    "label": "Employees",

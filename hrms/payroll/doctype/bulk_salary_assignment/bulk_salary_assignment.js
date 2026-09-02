@@ -38,6 +38,16 @@ function prorate(frm, row) {
 // mirrors PAYE_EMPLOYMENT_TYPES and the PAYE condition on the Salary Structure
 const PAYE_EMPLOYMENT_TYPES = ["Employment"];
 
+// mirrors get_paye() on the server: PAYE is banded, not a percentage, so prorating the
+// gross first would drop a part month employee into a lower band. Tax the whole month,
+// then prorate the tax on the same ratio the gross was prorated on
+function get_paye(row) {
+	const gross = flt(row.monthly_gross);
+	if (!gross || !PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)) return 0;
+	const full_nssf = row.has_nssf ? flt(gross * 0.1) : 0;
+	return flt((paye_calculator(gross - full_nssf) * flt(row.base)) / gross);
+}
+
 frappe.ui.form.on("Bulk Salary Assignment", {
 	setup(frm) {
 		frm.trigger("set_queries");
@@ -246,10 +256,8 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			}
 
 			row.taxable_income = flt(flt(row.base) - flt(row.nssf));
-			const paye = PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)
-				? paye_calculator(row.taxable_income)
-				: 0;
-			row.paye = flt(paye);
+			const paye = get_paye(row);
+			row.paye = paye;
 			row.total_deductions = flt(flt(row.nssf) + flt(row.nhif) + flt(row.heslb) + flt(row.paye) + flt(row.child_support) + flt(row.other_deduction));
 			let net_salary = flt(flt(row.base) - flt(row.total_deductions));
 			row.net_salary = flt(net_salary);
@@ -346,11 +354,8 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 					row.nssf = row.has_nssf ? flt(row.base * 0.1) : 0;
 					row.heslb = row.has_heslb ? flt(row.base * 0.15) : 0;
 					row.nhif = health_insurance(row);
-					const TAXABLE_INCOME = flt(row.base) - flt(row.nssf);
-					row.taxable_income = TAXABLE_INCOME;
-					row.paye = PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)
-						? flt(paye_calculator(TAXABLE_INCOME))
-						: 0;
+					row.taxable_income = flt(flt(row.base) - flt(row.nssf));
+					row.paye = get_paye(row);
 					row.total_deductions = flt(flt(row.nssf) + flt(row.paye) + flt(row.nhif) + flt(row.heslb) + flt(row.child_support) + flt(row.other_deduction));
 					row.net_salary = flt(flt(row.base) - flt(row.total_deductions));
 					frm.refresh_field("employees");

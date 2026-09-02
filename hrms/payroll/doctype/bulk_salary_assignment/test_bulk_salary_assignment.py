@@ -9,6 +9,7 @@ from frappe.utils import getdate
 from hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment import (
 	get_health_insurance,
 	get_payable_days,
+	get_paye,
 )
 
 
@@ -89,3 +90,37 @@ class TestReversedPeriod(IntegrationTestCase):
 		# which is why the client snaps To Date back to the end of From Date's month
 		days = get_payable_days(getdate("2026-10-01"), getdate("2026-10-31"), "2020-01-01", None)
 		self.assertEqual(days, 31)
+
+
+class TestPayeOnFullGross(IntegrationTestCase):
+	"""PAYE is banded, so the bands see the whole month and the tax is prorated after."""
+
+	def row(self, gross, has_nssf=0):
+		return frappe._dict(monthly_gross=gross, has_nssf=has_nssf, employment_type="Employment")
+
+	def test_bands_see_the_whole_month(self):
+		row = self.row(1500000)
+
+		# a full month is taxed exactly as before
+		self.assertEqual(get_paye(row, 1500000), 278000)
+
+		# half a month owes half that tax, not the tax on half the gross: 750,000 falls in
+		# the 20% band and would have been charged 66,000, i.e. 132,000 over the month
+		self.assertEqual(get_paye(row, 750000), 139000)
+
+		# and the halves still add back up to the full month's tax
+		self.assertEqual(get_paye(row, 750000) + get_paye(row, 750000), 278000)
+
+	def test_nssf_relief_is_a_whole_month_of_relief(self):
+		# 10% NSSF off 1,500,000 leaves 1,350,000 taxable -> 128,000 + 30% of 350,000
+		row = self.row(1500000, has_nssf=1)
+		self.assertEqual(get_paye(row, 1500000), 233000)
+		self.assertEqual(get_paye(row, 750000), 116500)
+
+	def test_not_charged_where_it_does_not_apply(self):
+		row = self.row(1500000)
+		row.employment_type = "Consultant"
+		self.assertEqual(get_paye(row, 1500000), 0)
+
+		# no gross, no tax, and no ZeroDivisionError
+		self.assertEqual(get_paye(self.row(0), 0), 0)

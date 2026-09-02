@@ -74,6 +74,23 @@ def get_health_insurance(row, base: float) -> float:
 	return flt(base * rate)
 
 
+def get_paye(row, base: float) -> float:
+	"""Tax the whole month's income, then prorate the tax by the days actually worked.
+
+	PAYE is banded, not a percentage: prorating the gross first drops a part month
+	employee into a lower band and under taxes them. A 1,500,000 gross taxed whole is
+	278,000; taxed on half a month's 750,000 it is only 66,000, and doubling that back
+	gives 132,000 instead of the 139,000 owed. So the bands are applied to the full monthly
+	gross and the resulting tax is prorated on exactly the ratio the gross was, which is
+	what the PAYE salary component does on the Salary Slip via Depends on Payment Days.
+	"""
+	gross = flt(row.monthly_gross)
+	if not gross or not is_paye_applicable(row.employment_type):
+		return 0.0
+	full_nssf = flt(gross * NSSF_RATE) if row.has_nssf else 0.0
+	return flt(calculate_paye(gross - full_nssf) * flt(base) / gross)
+
+
 def get_payable_days(start, end, date_of_joining=None, relieving_date=None) -> int:
 	"""Calendar days the employee is engaged for inside [start, end], both ends inclusive."""
 	first = max(getdate(date_of_joining), start) if date_of_joining else start
@@ -106,8 +123,9 @@ class BulkSalaryAssignment(Document):
 		Payable days are the days the employee is actually engaged within the month, so a
 		joiner on the 15th of a 30 day month is paid 16/30 of their monthly gross and a
 		leaver on the 15th is paid 15/30. Narrowing From Date/To Date to part of a month
-		prorates the same way, so paying 1 to 15 August gives 15/31. NSSF/NHIF/HESLB/PAYE
-		follow because they all derive from `base`. Child support and the "Deduction"
+		prorates the same way, so paying 1 to 15 August gives 15/31. NSSF/NHIF/HESLB
+		follow because they all derive from `base`; PAYE is banded, so it is charged on the
+		whole month and the tax is prorated instead, see `get_paye`. Child support and the "Deduction"
 		field are fixed monthly amounts, so they are taken whole and are not prorated.
 		"""
 		start, end = self.get_period()
@@ -172,7 +190,7 @@ class BulkSalaryAssignment(Document):
 			d.nhif = get_health_insurance(d, base)
 			d.heslb = flt(base * HESLB_RATE) if d.has_heslb else 0.0
 			d.taxable_income = flt(base - d.nssf)
-			d.paye = calculate_paye(d.taxable_income) if is_paye_applicable(d.employment_type) else 0.0
+			d.paye = get_paye(d, base)
 			d.total_deductions = flt(
 				d.nssf + d.nhif + d.heslb + d.paye + flt(d.child_support) + flt(d.other_deduction)
 			)
