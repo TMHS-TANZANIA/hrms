@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Coalesce
 from frappe.query_builder.terms import SubQuery
-from frappe.utils import date_diff, flt, get_first_day, get_last_day, get_link_to_form, getdate
+from frappe.utils import cint, date_diff, flt, get_first_day, get_last_day, get_link_to_form, getdate
 
 from hrms.hr.utils import validate_bulk_tool_fields
 from hrms.payroll.doctype.salary_structure.salary_structure import (
@@ -49,6 +49,12 @@ def calculate_paye(taxable_income: float) -> float:
 
 EMPLOYEE_FIELDS = [
 	"name",
+	"employee_name",
+	"gross_amount",
+	"has_nssf",
+	"has_health_insurance",
+	# the Employee field is spelled "helsb"; the child table calls it has_heslb
+	"has_helsb",
 	"date_of_joining",
 	"relieving_date",
 	"has_child_support",
@@ -102,14 +108,14 @@ class BulkSalaryAssignment(Document):
 	def validate(self):
 		if self.to_date and getdate(self.to_date) < getdate(self.from_date):
 			frappe.throw(_("To Date cannot be before From Date"))
+		self.sync_from_employee()
 		missing = [d.employee_name or d.employee for d in self.employees if flt(d.monthly_gross) <= 0]
 		if missing:
 			# one message for the whole table; throwing on the first row means finding the
 			# rest one save at a time
 			frappe.throw(
-				_("Monthly gross must be greater than zero for: {0}").format(", ".join(missing))
+				_("No approved gross salary for: {0}").format(", ".join(missing))
 			)
-		self.sync_from_employee()
 		self.calculate_totals()
 
 	def get_period(self) -> tuple:
@@ -118,7 +124,13 @@ class BulkSalaryAssignment(Document):
 		return start, getdate(self.to_date) if self.to_date else get_last_day(start)
 
 	def sync_from_employee(self):
-		"""Prorate on calendar days and pull the Other Deductions off the Employee record.
+		"""Refill every row from its Employee record, then prorate on calendar days.
+
+		The Employee is the authority for all of it, so a row only has to name an employee:
+		everything else is rebuilt here on save. That is what makes a CSV upload and a
+		duplicate work - upload a column of employee IDs, or copy last month's document and
+		move the dates, and saving repopulates names, grosses, flags and payable days from
+		whatever the Employee records say today.
 
 		Payable days are the days the employee is actually engaged within the month, so a
 		joiner on the 15th of a 30 day month is paid 16/30 of their monthly gross and a
@@ -142,13 +154,30 @@ class BulkSalaryAssignment(Document):
 				d.name: d
 				for d in frappe.get_all(
 					"Employee",
-					filters={"name": ("in", [d.employee for d in self.employees])},
+					filters={
+						"name": ("in", [d.employee for d in self.employees]),
+						"company": self.company,
+					},
 					fields=EMPLOYEE_FIELDS,
 				)
 			}
 
+		# an uploaded CSV can name anything, including a blank or someone else's employee;
+		# without this they become blank rows that quietly pay nobody
+		unknown = [d.employee or _("(blank)") for d in self.employees if d.employee not in employees]
+		if unknown:
+			frappe.throw(
+				_("Not an employee of {0}: {1}").format(self.company, ", ".join(unknown))
+			)
+
 		for d in self.employees:
-			emp = employees.get(d.employee) or frappe._dict()
+			emp = employees[d.employee]
+			d.employee_name = emp.employee_name
+			d.employee_number = emp.name
+			d.monthly_gross = flt(emp.gross_amount)
+			d.has_nssf = cint(emp.has_nssf)
+			d.has_health_insurance = cint(emp.has_health_insurance)
+			d.has_heslb = cint(emp.has_helsb)
 			d.payable_days = get_payable_days(start, end, emp.date_of_joining, emp.relieving_date)
 			d.base = flt(d.monthly_gross) * d.payable_days / self.days_in_month
 			d.child_support = flt(emp.child_support_amount) if emp.has_child_support else 0.0
