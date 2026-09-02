@@ -33,12 +33,17 @@
   "grand_total_nhif",
   "grand_total_net_salary",
   "summary_section",
+  "total_working_days",
+  "days_in_month",
   "total_gross_summary",
   "total_nssf",
   "total_nhif",
   "column_break_mczk",
   "total_paye",
   "total_heslb",
+  "total_child_support",
+  "total_other_deductions",
+  "total_deductions",
   "summary_for_cost_to_the_company_section",
   "total_company_nssf",
   "total_company_nhif",
@@ -533,6 +538,38 @@
    "fieldname": "grand_total_net_salary",
    "fieldtype": "Currency",
    "label": "Grand Total Net Salary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_child_support",
+   "fieldtype": "Currency",
+   "label": "Total Child Support",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_other_deductions",
+   "fieldtype": "Currency",
+   "label": "Total Other Deductions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_deductions",
+   "fieldtype": "Currency",
+   "label": "Total Deductions",
+   "read_only": 1
+  },
+  {
+   "description": "Calendar days between Start Date and End Date, mapped from the Bulk Salary Assignment.",
+   "fieldname": "total_working_days",
+   "fieldtype": "Int",
+   "label": "Total Working Days",
+   "read_only": 1
+  },
+  {
+   "description": "Calendar days in the month. The gross was prorated by this.",
+   "fieldname": "days_in_month",
+   "fieldtype": "Int",
+   "label": "Days in Month",
    "read_only": 1
   }
  ],

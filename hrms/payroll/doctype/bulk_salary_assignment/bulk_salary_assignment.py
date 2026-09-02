@@ -23,6 +23,31 @@ WCF_RATE = 0.005
 MIN_NHIF_CONTRIBUTION = 40000
 
 
+# The Payroll Entry mirrors this document; it maps, it never recalculates. Totals whose
+# names match are carried straight over, the rest are renamed here.
+TOTAL_FIELD_MAP = {
+	"total_base": "total_gross_summary",
+	"total_variable": "total_variable",
+	"total_nssf": "total_nssf",
+	"total_nhif": "total_nhif",
+	"total_heslb": "total_heslb",
+	"total_paye": "total_paye",
+	"total_child_support": "total_child_support",
+	"total_other_deductions": "total_other_deductions",
+	"total_deductions": "total_deductions",
+	"total_company_nssf": "total_company_nssf",
+	"total_company_nhif": "total_company_nhif",
+	"total_sdl": "total_sdl",
+	"total_wcf": "total_wcf",
+	"total_working_days": "total_working_days",
+	"days_in_month": "days_in_month",
+	"grand_total_nssf": "grand_total_nssf",
+	"grand_total_nhif": "grand_total_nhif",
+	"grand_total_gross": "grand_total_gross",
+	"grand_total_net_salary": "grand_total_net_salary",
+}
+
+
 # employment types that attract PAYE. Kept in step with the PAYE condition on the Salary
 # Structure; if the two drift, the Payroll Entry and the Salary Slip stop agreeing.
 PAYE_EMPLOYMENT_TYPES = ("Employment",)
@@ -502,25 +527,9 @@ class BulkSalaryAssignment(Document):
 		pe.title = self.title
 		pe.currency = self.currency
 		pe.payroll_payable_account = self.payroll_payable_account
-		pe.total_variable = self.total_variable
-		pe.total_nhif = self.total_nhif
-		pe.total_nssf = self.total_nssf
-		pe.total_heslb = self.total_heslb
-		pe.total_paye = self.total_paye
-		pe.total_gross_summary = self.total_base
-		pe.grand_total_net_salary = self.grand_total_net_salary
 		pe.bulk_salary_assignment = self.name
-		# Set total company contributions
-		pe.total_company_nhif = self.total_company_nhif
-		pe.total_company_nssf = self.total_company_nssf
-		pe.total_sdl = self.total_sdl
-		pe.total_wcf = self.total_wcf
-
-		# Set grand totals
-		pe.grand_total_nssf = self.grand_total_nssf
-		pe.grand_total_nssf = self.grand_total_nssf
-		pe.grand_total_nhif = self.grand_total_nhif
-		pe.grand_total_gross = self.grand_total_gross
+		for source, target in TOTAL_FIELD_MAP.items():
+			pe.set(target, self.get(source))
 
 		# Set posting date and payroll frequency
 		pe.posting_date = self.from_date
@@ -538,23 +547,18 @@ class BulkSalaryAssignment(Document):
 		else:
 			pe.exchange_rate = 1.0
 
-		# Add employees to Payroll Entry
+		# Add employees to Payroll Entry. Every field the two child tables share is copied
+		# across, so adding a column to Bulk Salary Assignment Employee carries it over
+		# with no change here.
+		source_meta = frappe.get_meta("Bulk Salary Assignment Employee")
+		row_fields = [
+			f.fieldname
+			for f in frappe.get_meta("Payroll Employee Detail").fields
+			if f.fieldtype not in ("Section Break", "Column Break")
+			and source_meta.has_field(f.fieldname)
+		]
 		for emp in self.employees:
-			pe.append(
-				"employees",
-				{
-					"employee": emp.employee,
-					"employee_name": emp.employee_name,
-					"base": emp.base,
-					"nssf": emp.nssf,
-					"paye": emp.paye,
-					"nhif": emp.nhif,
-					"heslb": emp.heslb,
-					"net_salary": emp.net_salary,
-					"taxable_income": emp.taxable_income,
-					"total_deductions": emp.total_deductions,
-				},
-			)
+			pe.append("employees", {f: emp.get(f) for f in row_fields})
 
 		# Populate sign_approvers if Payroll Entry has the sign workflow custom fields
 		if frappe.get_meta("Payroll Entry").has_field("sign_approvers"):

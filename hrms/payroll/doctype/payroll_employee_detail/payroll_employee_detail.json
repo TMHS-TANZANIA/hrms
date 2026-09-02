@@ -5,16 +5,27 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "employee_number",
   "employee",
   "employee_name",
+  "monthly_gross",
+  "payable_days",
   "base",
+  "taxable_income",
   "nssf",
   "nhif",
   "heslb",
+  "employment_type",
   "paye",
-  "taxable_income",
+  "child_support",
+  "other_deduction",
   "total_deductions",
   "net_salary",
+  "has_heslb",
+  "has_nssf",
+  "has_health_insurance",
+  "health_insurance_amount",
+  "health_insurance_percentage",
   "column_break_3",
   "department",
   "designation",
@@ -27,7 +38,8 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Employee",
-   "options": "Employee"
+   "options": "Employee",
+   "read_only": 1
   },
   {
    "fetch_from": "employee.employee_name",
@@ -102,7 +114,7 @@
    "fieldname": "base",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Gross",
+   "label": "Payable Gross",
    "read_only": 1
   },
   {
@@ -117,6 +129,85 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Total Deductions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "monthly_gross",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Monthly Gross",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payable_days",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Payable Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employment_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employment Type",
+   "options": "Employment Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "child_support",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Child Support",
+   "read_only": 1
+  },
+  {
+   "fieldname": "other_deduction",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Other Deduction",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "has_heslb",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "HESLB",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "has_nssf",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "NSSF",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "has_health_insurance",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "NHIF",
+   "read_only": 1
+  },
+  {
+   "fieldname": "health_insurance_amount",
+   "fieldtype": "Currency",
+   "label": "Health Insurance (Fixed)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "health_insurance_percentage",
+   "fieldtype": "Int",
+   "label": "Health Insurance %",
    "read_only": 1
   }
  ],
