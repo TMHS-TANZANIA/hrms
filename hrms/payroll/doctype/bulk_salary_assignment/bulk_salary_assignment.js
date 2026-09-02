@@ -1,7 +1,7 @@
 // Copyright (c) 2025, TMHS Group and contributors
 // For license information, please see license.txt
 function paye_calculator(TAXABLE_INCOME) {
-	paye = 0;
+	let paye = 0;
 	if (TAXABLE_INCOME < 270000) {
 		paye = 0;
 	}
@@ -105,17 +105,24 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		});
 	},
 	from_date(frm) {
-		// default to the whole month; HR narrows To Date to pay part of one
-		if (frm.doc.from_date && !frm.doc.to_date)
-			frm.set_value("to_date", moment(frm.doc.from_date).endOf("month").format("YYYY-MM-DD"));
-		frm.trigger("set_working_days");
+		if (!frm.doc.from_date) return;
+		// a To Date left behind in the month From Date just moved away from makes the
+		// period run backwards: total_working_days floors at 0, every row prorates to 0
+		// days and the whole table zeroes out. Snap it back to the month being paid for
+		const month_end = moment(frm.doc.from_date).endOf("month").format("YYYY-MM-DD");
+		if (frm.doc.to_date >= frm.doc.from_date && frm.doc.to_date <= month_end) {
+			frm.trigger("set_working_days");
+			return;
+		}
+		// HR narrows To Date afterwards to pay part of a month; its handler recalculates
+		frm.set_value("to_date", month_end);
 	},
 
 	to_date(frm) {
 		frm.trigger("set_working_days");
 	},
 
-	set_working_days(frm) {
+	set_period_days(frm) {
 		if (!frm.doc.from_date) return;
 		// an empty To Date means the whole month, the same default the server applies
 		const end = frm.doc.to_date
@@ -125,14 +132,18 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		frm.set_value("total_working_days", Math.max(days, 0));
 		// but the gross is always divided by the whole month, or a half month run would
 		// divide 15 days by 15 and pay out a full month
-		frm.set_value(
-			"days_in_month",
-			frm.doc.from_date ? moment(frm.doc.from_date).daysInMonth() : 0
-		);
-		// payable_days are per employee and come from the server, so narrowing the period
-		// needs a re-fetch to be exact; this keeps the visible numbers honest until then
-		(frm.doc.employees || []).forEach((row) => {
-			row.payable_days = Math.min(cint(row.payable_days), cint(frm.doc.total_working_days));
+		frm.set_value("days_in_month", moment(frm.doc.from_date).daysInMonth());
+	},
+
+	async set_working_days(frm) {
+		if (!frm.doc.from_date) return;
+		frm.trigger("set_period_days");
+		if (!(frm.doc.employees || []).length) return;
+		// payable days depend on each employee's joining and relieving date, which the row
+		// does not carry, so the server recomputes them for the new period
+		const r = await frm.call({ method: "refresh_payable_days", doc: frm.doc });
+		frm.doc.employees.forEach((row) => {
+			row.payable_days = cint(r.message[row.employee]);
 			prorate(frm, row);
 		});
 		frm.refresh_field("employees");
@@ -161,7 +172,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			doc: frm.doc,
 		}).then((r) => {
 			if (r.message && r.message.length) {
-				frm.trigger("set_working_days");
+				frm.trigger("set_period_days");
 				frm.clear_table("employees");
 				r.message.forEach((d) => {
 					let row = frm.add_child("employees");
@@ -235,7 +246,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			}
 
 			row.taxable_income = flt(flt(row.base) - flt(row.nssf));
-			paye = PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)
+			const paye = PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)
 				? paye_calculator(row.taxable_income)
 				: 0;
 			row.paye = flt(paye);

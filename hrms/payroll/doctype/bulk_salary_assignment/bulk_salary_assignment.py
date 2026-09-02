@@ -85,13 +85,13 @@ class BulkSalaryAssignment(Document):
 	def validate(self):
 		if self.to_date and getdate(self.to_date) < getdate(self.from_date):
 			frappe.throw(_("To Date cannot be before From Date"))
-		for d in self.employees:
-			if flt(d.monthly_gross) <= 0:
-				frappe.throw(
-					_("Monthly gross must be greater than zero for employee {0}").format(
-						d.employee_name or d.employee
-					)
-				)
+		missing = [d.employee_name or d.employee for d in self.employees if flt(d.monthly_gross) <= 0]
+		if missing:
+			# one message for the whole table; throwing on the first row means finding the
+			# rest one save at a time
+			frappe.throw(
+				_("Monthly gross must be greater than zero for: {0}").format(", ".join(missing))
+			)
 		self.sync_from_employee()
 		self.calculate_totals()
 
@@ -206,6 +206,18 @@ class BulkSalaryAssignment(Document):
 		self.grand_total_nhif = totals["total_nhif"] + totals["total_company_nhif"]
 
 	@frappe.whitelist()
+	def refresh_payable_days(self) -> dict:
+		"""Payable days per employee for the current period, keyed by employee.
+
+		The grid row carries no joining or relieving date, so the client cannot work this
+		out for itself. It used to clamp the previous value against the period length
+		instead, which drove every row to 0 days whenever To Date was left behind in a
+		month that From Date had already moved away from.
+		"""
+		self.sync_from_employee()
+		return {d.employee: d.payable_days for d in self.employees}
+
+	@frappe.whitelist()
 	def update_employee(self, employee, key, value):
 		employee = frappe.get_doc("Employee", employee)
 		if key == "has_health_insurance" and value and not employee.health_insurance:
@@ -306,27 +318,12 @@ class BulkSalaryAssignment(Document):
 				frappe.log_error(_("{0} is mandatory").format(self.meta.get_label(field)))
 				frappe.throw(_("{0} is mandatory").format(self.meta.get_label(field)))
 
-		# Convert employees child table to dicts
-		joining_dates = dict(
-			frappe.get_all(
-				"Employee",
-				filters={"name": ("in", [d.employee for d in self.employees])},
-				fields=["name", "date_of_joining"],
-				as_list=True,
-			)
-		)
+		assignment_dates = self.get_assignment_dates()
 
 		employees = []
 		for d in self.employees:
 			if d.base is None or d.base <= 0:
 				frappe.throw(_("Base salary must be greater than zero for employee {0}").format(d.employee))
-
-			# a Salary Structure Assignment cannot start before the employee did, so a mid
-			# month joiner is assigned from their joining date rather than the period start
-			doj = joining_dates.get(d.employee)
-			from_date = getdate(self.from_date)
-			if doj and getdate(doj) > from_date:
-				from_date = getdate(doj)
 
 			# the Salary Structure Assignment carries the full monthly rate, not the prorated
 			# amount. "Basic" depends on payment days, so the Salary Slip prorates it once
@@ -336,7 +333,7 @@ class BulkSalaryAssignment(Document):
 					"employee": d.employee,
 					"base": flt(d.monthly_gross) or flt(d.base),
 					"variable": d.variable,
-					"from_date": from_date,
+					"from_date": assignment_dates[d.employee],
 				}
 			)
 
@@ -349,6 +346,48 @@ class BulkSalaryAssignment(Document):
 				alert=True,
 				indicator="blue",
 			)
+
+	def get_assignment_dates(self) -> dict:
+		"""employee -> the date its Salary Structure Assignment starts on.
+
+		A Salary Structure Assignment cannot start before the employee did, so a mid month
+		joiner is assigned from their joining date rather than from the period start.
+		"""
+		from_date = getdate(self.from_date)
+		joining_dates = dict(
+			frappe.get_all(
+				"Employee",
+				filters={"name": ("in", [d.employee for d in self.employees])},
+				fields=["name", "date_of_joining"],
+				as_list=True,
+			)
+		)
+		return {
+			d.employee: max(getdate(joining_dates[d.employee]), from_date)
+			if joining_dates.get(d.employee)
+			else from_date
+			for d in self.employees
+		}
+
+	def on_cancel(self):
+		"""Cancel the Salary Structure Assignments this document created.
+
+		Without this an amended copy cannot be resubmitted: every employee still holds an
+		assignment on the same date, so DuplicateAssignment sends all of them to `failure`
+		and the amendment silently does nothing.
+		"""
+		for employee, from_date in self.get_assignment_dates().items():
+			name = frappe.db.get_value(
+				"Salary Structure Assignment",
+				{
+					"employee": employee,
+					"salary_structure": self.salary_structure,
+					"from_date": from_date,
+					"docstatus": 1,
+				},
+			)
+			if name:
+				frappe.get_doc("Salary Structure Assignment", name).cancel()
 
 	def _bulk_assign_structure(self, employees: list) -> None:
 		success, failure = [], []
