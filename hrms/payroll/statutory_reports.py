@@ -279,16 +279,47 @@ def download(payroll_entry: str, report: str):
 	doc = frappe.get_doc("Payroll Entry", payroll_entry)
 	doc.check_permission("read")
 
-	wb = BUILDERS[report](get_rows(payroll_entry), doc)
+	# volunteers and consultants are paid a reimbursement against a zero base; filing them
+	# at nil earnings registers them with the authority as employees
+	rows = [r for r in get_rows(payroll_entry) if flt(r.basic)]
+	if not rows:
+		frappe.throw(_("No employee in {0} has any basic pay to report").format(payroll_entry))
+
+	wb = BUILDERS[report](rows, doc)
 	as_download(wb, f"{report}-{payroll_entry}.xlsx")
 
 
-def build_bank_transactions(rows, doc):
-	"""Bank upload file: one payment line per employee paid by bank transfer."""
+BANK_SHEETS = ("Salary", "Reimbursement", "Volunteer")
+
+
+def bank_amount(row, sheet: str) -> float:
+	"""What one sheet pays one employee.
+
+	The split is basic pay, not employment type: a volunteer or consultant engaged for a
+	reimbursement alone has no basic, so their whole net pay is that reimbursement and it
+	goes out on the Volunteer sheet. Give one of them a real salary and they move onto the
+	staff sheets on their own, and no employment type added later falls through a gap.
+	"""
+	if not flt(row.basic):
+		return flt(row.net_pay) if sheet == "Volunteer" else 0.0
+	if sheet == "Reimbursement":
+		return flt(row.reimbursement)
+	if sheet == "Salary":
+		# reimbursement is paid out separately, so it stays out of the salary transfer
+		return flt(row.net_pay) - flt(row.reimbursement)
+	return 0.0
+
+
+def build_bank_transactions(rows, doc, sheet: str = "Salary"):
+	"""Bank upload file: one payment line per employee this sheet pays by transfer."""
 	wb = load_template("bank_transactions.xlsx")
 
-	payable = [r for r in rows if (r.salary_mode or "") == "Bank"]
-	missing = [r.employee_name for r in payable if not (r.bank_ac_no or "").strip()]
+	payable = [(r, bank_amount(r, sheet)) for r in rows if (r.salary_mode or "") == "Bank"]
+	payable = [(r, amount) for r, amount in payable if amount > 0]
+	if not payable:
+		frappe.throw(_("No employee in {0} is paid on the {1} sheet").format(doc.name, sheet))
+
+	missing = [r.employee_name for r, amount in payable if not (r.bank_ac_no or "").strip()]
 	if missing:
 		frappe.throw(_("Missing bank account number for: {0}").format(", ".join(missing)))
 
@@ -297,24 +328,26 @@ def build_bank_transactions(rows, doc):
 		[
 			[
 				(r.employee_name or "").upper(),
-				# reimbursement is paid out separately, so it stays out of the salary transfer
-				flt(r.net_pay) - flt(r.reimbursement),
+				amount,
 				(r.bank_ac_no or "").strip(),
 				"INTERNAL" if INTERNAL_BANK in (r.bank_name or "").upper() else "DOMESTIC",
 				(r.bank_name or "").upper(),
-				"salary",
+				"salary" if sheet == "Salary" else "reimbursement",
 				getdate(doc.start_date),
 			]
-			for r in payable
+			for r, amount in payable
 		],
 	)
 	return wb
 
 
 @frappe.whitelist()
-def download_bank_transactions(payroll_entry: str):
+def download_bank_transactions(payroll_entry: str, sheet: str = "Salary"):
+	if sheet not in BANK_SHEETS:
+		frappe.throw(_("Unknown bank sheet {0}").format(sheet))
+
 	doc = frappe.get_doc("Payroll Entry", payroll_entry)
 	doc.check_permission("read")
 
-	wb = build_bank_transactions(get_rows(payroll_entry), doc)
-	as_download(wb, f"Bank-Transactions-{payroll_entry}.xlsx")
+	wb = build_bank_transactions(get_rows(payroll_entry), doc, sheet)
+	as_download(wb, f"Bank-{sheet}-{payroll_entry}.xlsx")

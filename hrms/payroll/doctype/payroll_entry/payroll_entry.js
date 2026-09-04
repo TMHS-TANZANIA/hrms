@@ -214,11 +214,17 @@ frappe.ui.form.on("Payroll Entry", {
 			);
 		}
 
-		frm.add_custom_button(__("Bank Transactions"), () =>
-			open_url_post("/api/method/hrms.payroll.statutory_reports.download_bank_transactions", {
-				payroll_entry: frm.doc.name,
-			}),
-		);
+		for (const sheet of ["Salary", "Reimbursement", "Volunteer"]) {
+			frm.add_custom_button(
+				__(sheet),
+				() =>
+					open_url_post(
+						"/api/method/hrms.payroll.statutory_reports.download_bank_transactions",
+						{ payroll_entry: frm.doc.name, sheet: sheet },
+					),
+				__("Bank Sheets"),
+			);
+		}
 	},
 
 	add_bank_entry_button: function (frm) {

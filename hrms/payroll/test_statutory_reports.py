@@ -46,18 +46,41 @@ ROWS = [
 ]
 
 BANK_ROWS = ROWS + [
+	# staff: a salary and a reimbursement, paid on two different sheets
 	_dict(
 		employee_name="Neema Juma",
+		basic=900000,
 		net_pay=900000,
 		reimbursement=0,
 		salary_mode="Bank",
 		bank_name="Stanbic",
 		bank_ac_no="98765432",
 	),
-	_dict(employee_name="Paid In Cash", salary_mode="Cash", net_pay=100000, reimbursement=0),
+	# volunteer: no basic, so the whole net pay is the reimbursement
+	_dict(
+		employee_name="Zawadi Volunteer",
+		basic=0,
+		net_pay=300000,
+		reimbursement=300000,
+		salary_mode="Bank",
+		bank_name="CRDB",
+		bank_ac_no="55554444",
+	),
+	_dict(
+		employee_name="Paid In Cash",
+		basic=500000,
+		salary_mode="Cash",
+		net_pay=500000,
+		reimbursement=0,
+	),
 ]
 
-DOC = _dict(company="TMHS GROUP LIMITED", start_date="2026-08-01", end_date="2026-07-31")
+DOC = _dict(
+	name="MAL-PE-2026-00001",
+	company="TMHS GROUP LIMITED",
+	start_date="2026-08-01",
+	end_date="2026-07-31",
+)
 
 
 def main():
@@ -135,28 +158,50 @@ def main():
 		2000000,
 	], "NHIF row mismatch"
 
-	bank = sr.build_bank_transactions(BANK_ROWS, DOC)["Sheet1"]
-	assert bank["A1"].value == "Beneficiary_Name"
-	assert [c.value for c in bank[2]] == [
+	salary = sr.build_bank_transactions(BANK_ROWS, DOC, "Salary")["Sheet1"]
+	assert salary["A1"].value == "Beneficiary_Name", "template header row was overwritten"
+	assert [c.value for c in salary[2]] == [
 		"ABASI MOHAMED HASSANI",
-		1700000,  # net pay less the reimbursement
+		1700000,  # net pay less the reimbursement, which goes out on its own sheet
 		"123456789",
 		"INTERNAL",
 		"NMB BANK PLC",
 		"salary",
 		datetime.date(2026, 8, 1),
-	], "bank row mismatch"
-	assert [c.value for c in bank[3]][3:5] == ["DOMESTIC", "STANBIC"], "non-NMB must be domestic"
-	assert bank["A4"].value is None, "cash-paid employee must not be in the bank file"
+	], "salary row mismatch"
+	assert [c.value for c in salary[3]][3:5] == ["DOMESTIC", "STANBIC"], "non-NMB must be domestic"
+	assert salary["A4"].value is None, "only the two salaried employees belong on the salary sheet"
+
+	reimbursement = sr.build_bank_transactions(BANK_ROWS, DOC, "Reimbursement")["Sheet1"]
+	assert [c.value for c in reimbursement[2]][:2] == ["ABASI MOHAMED HASSANI", 50000]
+	assert reimbursement["F2"].value == "reimbursement"
+	# Neema has no reimbursement and the volunteer is not staff, so neither is on this sheet
+	assert reimbursement["A3"].value is None, "zero and non-staff rows must be dropped"
+
+	volunteer = sr.build_bank_transactions(BANK_ROWS, DOC, "Volunteer")["Sheet1"]
+	assert [c.value for c in volunteer[2]] == [
+		"ZAWADI VOLUNTEER",
+		300000,
+		"55554444",
+		"DOMESTIC",
+		"CRDB",
+		"reimbursement",
+		datetime.date(2026, 8, 1),
+	], "volunteer row mismatch"
+	assert volunteer["A3"].value is None, "only the zero-basic employees belong on this sheet"
 
 	thrown = []
 	sr.frappe.throw = lambda msg, *a, **kw: thrown.append(msg)
 	sr._ = lambda msg: msg
 	sr.build_bank_transactions(
-		[_dict(employee_name="No Account", salary_mode="Bank", net_pay=1, reimbursement=0, bank_ac_no="")],
+		[_dict(employee_name="No Account", basic=1, salary_mode="Bank", net_pay=1, reimbursement=0, bank_ac_no="")],
 		DOC,
 	)
 	assert thrown, "missing account number must throw"
+
+	thrown.clear()
+	sr.build_bank_transactions([r for r in BANK_ROWS if r.basic], DOC, "Volunteer")
+	assert thrown, "a sheet nobody is paid on must throw rather than download empty"
 
 	print("statutory reports ok")
 
