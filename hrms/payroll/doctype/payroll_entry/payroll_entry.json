@@ -29,6 +29,7 @@
   "grand_total_summary_section",
   "grand_total_nssf",
   "grand_total_gross",
+  "grand_total_gross_with_reimbursement",
   "column_break_wxvf",
   "grand_total_nhif",
   "grand_total_net_salary",
@@ -36,6 +37,7 @@
   "total_working_days",
   "days_in_month",
   "total_gross_summary",
+  "total_reimbursement",
   "total_nssf",
   "total_nhif",
   "column_break_mczk",
@@ -570,6 +572,19 @@
    "fieldname": "days_in_month",
    "fieldtype": "Int",
    "label": "Days in Month",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_reimbursement",
+   "fieldtype": "Currency",
+   "label": "Total Reimbursement",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_total_gross_with_reimbursement",
+   "fieldtype": "Currency",
+   "label": "Grand Total Gross + Reimbursement",
    "read_only": 1
   }
  ],

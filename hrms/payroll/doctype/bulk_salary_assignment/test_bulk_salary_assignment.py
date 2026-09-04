@@ -7,6 +7,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment import (
+	BulkSalaryAssignment,
 	get_health_insurance,
 	get_payable_days,
 	get_paye,
@@ -124,3 +125,37 @@ class TestPayeOnFullGross(IntegrationTestCase):
 
 		# no gross, no tax, and no ZeroDivisionError
 		self.assertEqual(get_paye(self.row(0), 0), 0)
+
+
+class TestReimbursement(IntegrationTestCase):
+	"""Paid out separately from salary: summed on its own, never folded into gross or net."""
+
+	def test_reimbursement_is_paid_on_top(self):
+		doc = frappe._dict(
+			employees=[
+				frappe._dict(
+					base=1000000,
+					monthly_gross=1000000,
+					employment_type="Employment",
+					has_nssf=1,
+					has_health_insurance=0,
+					has_heslb=0,
+					variable=0,
+					child_support=0,
+					other_deduction=0,
+					reimbursement=50000,
+					health_insurance_amount=0,
+					health_insurance_percentage=0,
+				)
+			]
+		)
+		BulkSalaryAssignment.calculate_totals(doc)
+		row = doc.employees[0]
+
+		self.assertEqual(doc.total_reimbursement, 50000)
+		# taxed on the base alone; the reimbursement is not in the taxable income
+		self.assertEqual(row.taxable_income, 900000)
+		# paid separately from salary, so neither the net nor the gross carries it
+		self.assertEqual(row.net_salary, 1000000 - row.total_deductions)
+		self.assertEqual(doc.grand_total_gross, 1000000)
+		self.assertEqual(doc.grand_total_gross_with_reimbursement, 1050000)

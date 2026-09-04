@@ -194,6 +194,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 					prorate(frm, row);
 					row.child_support = flt(d.child_support);
 					row.other_deduction = flt(d.other_deduction);
+					row.reimbursement = flt(d.reimbursement);
 					row.health_insurance_amount = flt(d.health_insurance_amount);
 					row.health_insurance_percentage = cint(d.health_insurance_percentage);
 					row.employment_type = d.employment_type;
@@ -227,6 +228,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		let total_wcf = 0;
 		let total_child_support = 0;
 		let total_other_deductions = 0;
+		let total_reimbursement = 0;
 		let total_deductions = 0;
 		frm.doc.employees.forEach((row) => {
 			total_base += flt(row.base);
@@ -259,6 +261,8 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 			const paye = get_paye(row);
 			row.paye = paye;
 			row.total_deductions = flt(flt(row.nssf) + flt(row.nhif) + flt(row.heslb) + flt(row.paye) + flt(row.child_support) + flt(row.other_deduction));
+			// paid out separately from salary, so it is never folded into the gross or the net
+			total_reimbursement += flt(row.reimbursement);
 			let net_salary = flt(flt(row.base) - flt(row.total_deductions));
 			row.net_salary = flt(net_salary);
 			grand_total_net_salary += flt(net_salary);
@@ -273,6 +277,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		frm.set_value("total_heslb", total_heslb);
 		frm.set_value("total_nssf", total_nssf);
 		frm.set_value("total_variable", total_variable);
+		frm.set_value("total_reimbursement", total_reimbursement);
 		frm.set_value("total_paye", total_paye);
 		frm.set_value("total_child_support", total_child_support);
 		frm.set_value("total_other_deductions", total_other_deductions);
@@ -285,6 +290,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 		frm.set_value("total_wcf", total_wcf);
 		// Set Grand Totals
 		frm.set_value("grand_total_gross", total_base);
+		frm.set_value("grand_total_gross_with_reimbursement", total_base + total_reimbursement);
 		frm.set_value("grand_total_nhif", total_nhif+total_company_nhif);
 		frm.set_value("grand_total_nssf", total_nssf+total_company_nssf);
 		frm.set_value("grand_total_net_salary", grand_total_net_salary);
@@ -344,6 +350,7 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 					prorate(frm, row);
 					row.child_support = flt(r.message.child_support);
 					row.other_deduction = flt(r.message.other_deduction);
+					row.reimbursement = flt(r.message.reimbursement);
 					row.health_insurance_amount = flt(r.message.health_insurance_amount);
 					row.health_insurance_percentage = cint(r.message.health_insurance_percentage);
 					row.employment_type = r.message.employment_type;

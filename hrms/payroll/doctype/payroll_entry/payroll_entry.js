@@ -181,6 +181,8 @@ frappe.ui.form.on("Payroll Entry", {
 	},
 
 	add_context_buttons: function (frm) {
+		frm.events.add_statutory_report_buttons(frm);
+
 		if (
 			frm.doc.salary_slips_submitted ||
 			(frm.doc.__onload && frm.doc.__onload.submitted_ss)
@@ -194,6 +196,22 @@ frappe.ui.form.on("Payroll Entry", {
 			frm.add_custom_button(__("Create Salary Slips"), function () {
 				frm.trigger("create_salary_slip");
 			}).addClass("btn-primary");
+		}
+	},
+
+	add_statutory_report_buttons: function (frm) {
+		if (!frm.doc.salary_slips_created) return;
+
+		for (const report of ["PAYE", "SDL", "NSSF", "NHIF", "WCF"]) {
+			frm.add_custom_button(
+				__(report),
+				() =>
+					open_url_post("/api/method/hrms.payroll.statutory_reports.download", {
+						payroll_entry: frm.doc.name,
+						report: report,
+					}),
+				__("Statutory Reports"),
+			);
 		}
 	},
 

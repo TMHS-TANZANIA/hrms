@@ -13,6 +13,7 @@
   "payable_days",
   "base",
   "variable",
+  "reimbursement",
   "taxable_income",
   "nssf",
   "nhif",
@@ -190,6 +191,14 @@
    "in_list_view": 1,
    "label": "Employment Type",
    "options": "Employment Type",
+   "read_only": 1
+  },
+  {
+   "description": "Employee > Salary Information > Reimbursement. Paid whole, not prorated and not taxed.",
+   "fieldname": "reimbursement",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Reimbursement",
    "read_only": 1
   }
  ],

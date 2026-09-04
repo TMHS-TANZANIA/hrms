@@ -11,6 +11,7 @@
   "monthly_gross",
   "payable_days",
   "base",
+  "reimbursement",
   "taxable_income",
   "nssf",
   "nhif",
@@ -208,6 +209,13 @@
    "fieldname": "health_insurance_percentage",
    "fieldtype": "Int",
    "label": "Health Insurance %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reimbursement",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Reimbursement",
    "read_only": 1
   }
  ],

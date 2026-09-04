@@ -28,6 +28,7 @@ MIN_NHIF_CONTRIBUTION = 40000
 TOTAL_FIELD_MAP = {
 	"total_base": "total_gross_summary",
 	"total_variable": "total_variable",
+	"total_reimbursement": "total_reimbursement",
 	"total_nssf": "total_nssf",
 	"total_nhif": "total_nhif",
 	"total_heslb": "total_heslb",
@@ -44,6 +45,7 @@ TOTAL_FIELD_MAP = {
 	"grand_total_nssf": "grand_total_nssf",
 	"grand_total_nhif": "grand_total_nhif",
 	"grand_total_gross": "grand_total_gross",
+	"grand_total_gross_with_reimbursement": "grand_total_gross_with_reimbursement",
 	"grand_total_net_salary": "grand_total_net_salary",
 }
 
@@ -85,6 +87,7 @@ EMPLOYEE_FIELDS = [
 	"has_child_support",
 	"child_support_amount",
 	"refund",
+	"reimbursement",
 	"health_insurance_amount",
 	"health_insurance_percentage",
 	"employment_type",
@@ -207,6 +210,7 @@ class BulkSalaryAssignment(Document):
 			d.base = flt(d.monthly_gross) * d.payable_days / self.days_in_month
 			d.child_support = flt(emp.child_support_amount) if emp.has_child_support else 0.0
 			d.other_deduction = flt(emp.refund)
+			d.reimbursement = flt(emp.reimbursement)
 			d.health_insurance_amount = flt(emp.health_insurance_amount)
 			d.health_insurance_percentage = emp.health_insurance_percentage
 			d.employment_type = emp.employment_type
@@ -221,6 +225,7 @@ class BulkSalaryAssignment(Document):
 			[
 				"total_base",
 				"total_variable",
+				"total_reimbursement",
 				"total_nssf",
 				"total_nhif",
 				"total_heslb",
@@ -248,10 +253,12 @@ class BulkSalaryAssignment(Document):
 			d.total_deductions = flt(
 				d.nssf + d.nhif + d.heslb + d.paye + flt(d.child_support) + flt(d.other_deduction)
 			)
+			# reimbursement is paid out separately from salary, so it stays out of net pay
 			d.net_salary = flt(base - d.total_deductions)
 
 			totals["total_base"] += base
 			totals["total_variable"] += flt(d.variable)
+			totals["total_reimbursement"] += flt(d.reimbursement)
 			totals["total_nssf"] += d.nssf
 			totals["total_nhif"] += d.nhif
 			totals["total_heslb"] += d.heslb
@@ -274,6 +281,7 @@ class BulkSalaryAssignment(Document):
 
 		self.update(totals)
 		self.grand_total_gross = totals["total_base"]
+		self.grand_total_gross_with_reimbursement = totals["total_base"] + totals["total_reimbursement"]
 		self.grand_total_nssf = totals["total_nssf"] + totals["total_company_nssf"]
 		self.grand_total_nhif = totals["total_nhif"] + totals["total_company_nhif"]
 
@@ -311,6 +319,7 @@ class BulkSalaryAssignment(Document):
 			"gross_amount": employee.gross_amount,
 			"child_support": flt(employee.child_support_amount) if employee.has_child_support else 0.0,
 			"other_deduction": flt(employee.refund),
+			"reimbursement": flt(employee.reimbursement),
 			"health_insurance_amount": flt(employee.health_insurance_amount),
 			"health_insurance_percentage": employee.health_insurance_percentage,
 			"employment_type": employee.employment_type,
@@ -360,6 +369,7 @@ class BulkSalaryAssignment(Document):
 				Employee.has_child_support,
 				Employee.child_support_amount,
 				Employee.refund,
+				Employee.reimbursement,
 				Employee.health_insurance_amount,
 				Employee.health_insurance_percentage,
 				Employee.employment_type,
