@@ -24,6 +24,10 @@ REPORTS = ("PAYE", "SDL", "NSSF", "NHIF", "WCF")
 # component name -> value we pull off each salary slip
 BASIC_COMPONENT = "Basic"
 NSSF_COMPONENT = "NSSF"
+REIMBURSEMENT_COMPONENT = "REIMBURSEMENT"
+
+# bank codes paid inside the bank itself; everything else is an interbank transfer
+INTERNAL_BANK = "NMB"
 
 
 def digits(value: str) -> str:
@@ -42,6 +46,7 @@ def get_rows(payroll_entry: str) -> list[dict]:
 		.on(ss.employee == emp.name)
 		.select(
 			ss.name.as_("salary_slip"),
+			ss.net_pay,
 			emp.name.as_("employee"),
 			emp.employee_name,
 			emp.first_name,
@@ -61,6 +66,9 @@ def get_rows(payroll_entry: str) -> list[dict]:
 			emp.nhif_number,
 			emp.wcf_number,
 			emp.nida_number,
+			emp.salary_mode,
+			emp.bank_name,
+			emp.bank_ac_no,
 		)
 		.where((ss.payroll_entry == payroll_entry) & (ss.docstatus != 2))
 		.orderby(emp.employee_name)
@@ -73,7 +81,7 @@ def get_rows(payroll_entry: str) -> list[dict]:
 		"Salary Detail",
 		filters={
 			"parent": ("in", [r.salary_slip for r in rows]),
-			"salary_component": ("in", [BASIC_COMPONENT, NSSF_COMPONENT]),
+			"salary_component": ("in", [BASIC_COMPONENT, NSSF_COMPONENT, REIMBURSEMENT_COMPONENT]),
 		},
 		fields=["parent", "salary_component", "amount"],
 	)
@@ -85,6 +93,7 @@ def get_rows(payroll_entry: str) -> list[dict]:
 		slip = by_slip.get(r.salary_slip, {})
 		r.basic = slip.get(BASIC_COMPONENT, 0)
 		r.nssf = slip.get(NSSF_COMPONENT, 0)
+		r.reimbursement = slip.get(REIMBURSEMENT_COMPONENT, 0)
 
 	return rows
 
@@ -272,3 +281,40 @@ def download(payroll_entry: str, report: str):
 
 	wb = BUILDERS[report](get_rows(payroll_entry), doc)
 	as_download(wb, f"{report}-{payroll_entry}.xlsx")
+
+
+def build_bank_transactions(rows, doc):
+	"""Bank upload file: one payment line per employee paid by bank transfer."""
+	wb = load_template("bank_transactions.xlsx")
+
+	payable = [r for r in rows if (r.salary_mode or "") == "Bank"]
+	missing = [r.employee_name for r in payable if not (r.bank_ac_no or "").strip()]
+	if missing:
+		frappe.throw(_("Missing bank account number for: {0}").format(", ".join(missing)))
+
+	write(
+		wb["Sheet1"],
+		[
+			[
+				(r.employee_name or "").upper(),
+				# reimbursement is paid out separately, so it stays out of the salary transfer
+				flt(r.net_pay) - flt(r.reimbursement),
+				(r.bank_ac_no or "").strip(),
+				"INTERNAL" if INTERNAL_BANK in (r.bank_name or "").upper() else "DOMESTIC",
+				(r.bank_name or "").upper(),
+				"salary",
+				getdate(doc.start_date),
+			]
+			for r in payable
+		],
+	)
+	return wb
+
+
+@frappe.whitelist()
+def download_bank_transactions(payroll_entry: str):
+	doc = frappe.get_doc("Payroll Entry", payroll_entry)
+	doc.check_permission("read")
+
+	wb = build_bank_transactions(get_rows(payroll_entry), doc)
+	as_download(wb, f"Bank-Transactions-{payroll_entry}.xlsx")

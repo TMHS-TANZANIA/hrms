@@ -37,10 +37,27 @@ ROWS = [
 		nida_number="1976-0221-1111-2222",
 		basic=2000000,
 		nssf=200000,
+		net_pay=1750000,
+		reimbursement=50000,
+		salary_mode="Bank",
+		bank_name="NMB Bank Plc",
+		bank_ac_no=" 123456789 ",
 	)
 ]
 
-DOC = _dict(company="TMHS GROUP LIMITED", end_date="2026-07-31")
+BANK_ROWS = ROWS + [
+	_dict(
+		employee_name="Neema Juma",
+		net_pay=900000,
+		reimbursement=0,
+		salary_mode="Bank",
+		bank_name="Stanbic",
+		bank_ac_no="98765432",
+	),
+	_dict(employee_name="Paid In Cash", salary_mode="Cash", net_pay=100000, reimbursement=0),
+]
+
+DOC = _dict(company="TMHS GROUP LIMITED", start_date="2026-08-01", end_date="2026-07-31")
 
 
 def main():
@@ -117,6 +134,29 @@ def main():
 		datetime.date(2026, 1, 6),
 		2000000,
 	], "NHIF row mismatch"
+
+	bank = sr.build_bank_transactions(BANK_ROWS, DOC)["Sheet1"]
+	assert bank["A1"].value == "Beneficiary_Name"
+	assert [c.value for c in bank[2]] == [
+		"ABASI MOHAMED HASSANI",
+		1700000,  # net pay less the reimbursement
+		"123456789",
+		"INTERNAL",
+		"NMB BANK PLC",
+		"salary",
+		datetime.date(2026, 8, 1),
+	], "bank row mismatch"
+	assert [c.value for c in bank[3]][3:5] == ["DOMESTIC", "STANBIC"], "non-NMB must be domestic"
+	assert bank["A4"].value is None, "cash-paid employee must not be in the bank file"
+
+	thrown = []
+	sr.frappe.throw = lambda msg, *a, **kw: thrown.append(msg)
+	sr._ = lambda msg: msg
+	sr.build_bank_transactions(
+		[_dict(employee_name="No Account", salary_mode="Bank", net_pay=1, reimbursement=0, bank_ac_no="")],
+		DOC,
+	)
+	assert thrown, "missing account number must throw"
 
 	print("statutory reports ok")
 

@@ -213,6 +213,12 @@ frappe.ui.form.on("Payroll Entry", {
 				__("Statutory Reports"),
 			);
 		}
+
+		frm.add_custom_button(__("Bank Transactions"), () =>
+			open_url_post("/api/method/hrms.payroll.statutory_reports.download_bank_transactions", {
+				payroll_entry: frm.doc.name,
+			}),
+		);
 	},
 
 	add_bank_entry_button: function (frm) {
