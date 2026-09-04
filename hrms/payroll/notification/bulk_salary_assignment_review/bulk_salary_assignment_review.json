@@ -1,0 +1,28 @@
+{
+ "attach_print": 0,
+ "channel": "Email",
+ "condition": "doc.workflow_state == \"Pending\"",
+ "date_changed": null,
+ "days_in_advance": 0,
+ "docstatus": 0,
+ "doctype": "Notification",
+ "document_type": "Bulk Salary Assignment",
+ "enabled": 1,
+ "event": "Value Change",
+ "idx": 0,
+ "is_standard": 1,
+ "message": "",
+ "modified": "2026-09-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Payroll",
+ "name": "Bulk Salary Assignment Review",
+ "owner": "Administrator",
+ "recipients": [
+  {
+   "receiver_by_role": "Accounts Manager"
+  }
+ ],
+ "send_system_notification": 1,
+ "subject": "Action Required: Bulk Salary Assignment {{ doc.name }} needs your review",
+ "value_changed": "workflow_state"
+}

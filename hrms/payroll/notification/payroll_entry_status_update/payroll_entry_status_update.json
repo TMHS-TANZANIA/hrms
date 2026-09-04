@@ -1,0 +1,28 @@
+{
+ "attach_print": 0,
+ "channel": "Email",
+ "condition": "doc.workflow_state in (\"Approved\", \"Rejected\", \"Draft\")",
+ "date_changed": null,
+ "days_in_advance": 0,
+ "docstatus": 0,
+ "doctype": "Notification",
+ "document_type": "Payroll Entry",
+ "enabled": 1,
+ "event": "Value Change",
+ "idx": 0,
+ "is_standard": 1,
+ "message": "",
+ "modified": "2026-09-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Payroll",
+ "name": "Payroll Entry Status Update",
+ "owner": "Administrator",
+ "recipients": [
+  {
+   "receiver_by_document_field": "owner"
+  }
+ ],
+ "send_system_notification": 1,
+ "subject": "Payroll Entry {{ doc.name }} is {{ doc.workflow_state }}",
+ "value_changed": "workflow_state"
+}
