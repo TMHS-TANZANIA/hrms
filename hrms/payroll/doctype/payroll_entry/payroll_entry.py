@@ -9,6 +9,7 @@ import frappe
 from frappe import _
 from frappe.desk.reportview import get_match_cond
 from frappe.model.document import Document
+from frappe.model.workflow import get_workflow_name
 from frappe.query_builder.functions import Coalesce, Count
 from frappe.utils import (
 	DATE_FORMAT,
@@ -20,7 +21,10 @@ from frappe.utils import (
 	flt,
 	get_link_to_form,
 	getdate,
+	now_datetime,
+	time_diff_in_hours,
 )
+from frappe.utils.user import get_users_with_role
 
 import erpnext
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -1849,3 +1853,84 @@ def get_salary_withholdings(
 	if pluck:
 		return withheld_salaries.run(pluck=pluck)
 	return withheld_salaries.run(as_dict=True)
+
+
+# hours a submitted Payroll Entry may sit with an approver before we chase them again
+APPROVAL_REMINDER_HOURS = (2, 4, 8, 12)
+
+
+def get_pending_approval_states() -> set[str]:
+	"""Workflow states a Payroll Entry only reaches once it has been submitted for approval.
+
+	Read off the workflow rather than named here, so renaming a state does not quietly
+	stop the reminders. The first state is the draft the entry sits in before submission;
+	Approved and Rejected have no onward transition, so they never hold an open action.
+	"""
+	workflow = get_workflow_name("Payroll Entry")
+	if not workflow:
+		return set()
+
+	states = frappe.get_all(
+		"Workflow Document State", filters={"parent": workflow}, pluck="state", order_by="idx"
+	)
+	return set(states[1:])
+
+
+def send_approval_reminders():
+	"""Chase whoever a submitted Payroll Entry is waiting on, hourly.
+
+	The clock is the Workflow Action frappe opens when the entry enters an approval state,
+	which is also what names the roles that owe the action. That restarts the count at each
+	stage, so an approver who has only just received the entry is not chased for the time
+	the previous one took.
+	"""
+	# ponytail: a milestone fires in the hour it falls in, so a scheduler run missed at
+	# exactly that hour skips that one reminder. Persist a sent count on the entry if the
+	# reminders ever need to survive downtime.
+	pending_states = get_pending_approval_states()
+	if not pending_states:
+		return
+
+	actions = frappe.get_all(
+		"Workflow Action",
+		filters={
+			"reference_doctype": "Payroll Entry",
+			"status": "Open",
+			"workflow_state": ("in", list(pending_states)),
+		},
+		fields=["name", "reference_name", "workflow_state", "creation"],
+	)
+	if not actions:
+		return
+
+	now = now_datetime()
+	template = frappe.get_doc("Email Template", "Payroll Entry")
+
+	for action in actions:
+		hours = int(time_diff_in_hours(now, action.creation))
+		if hours not in APPROVAL_REMINDER_HOURS:
+			continue
+
+		recipients = get_approver_emails(action.name)
+		if not recipients:
+			continue
+
+		doc = frappe.get_doc("Payroll Entry", action.reference_name)
+		context = doc.as_dict()
+		frappe.sendmail(
+			recipients=recipients,
+			subject=_("Reminder ({0}h): {1}").format(
+				hours, frappe.render_template(template.subject, context)
+			),
+			message=frappe.render_template(template.response_html or template.response, context),
+			reference_doctype=doc.doctype,
+			reference_name=doc.name,
+		)
+
+
+def get_approver_emails(workflow_action: str) -> list[str]:
+	roles = frappe.get_all(
+		"Workflow Action Permitted Role", filters={"parent": workflow_action}, pluck="role"
+	)
+	emails = {email for role in roles for email in get_users_with_role(role)}
+	return sorted(emails)
