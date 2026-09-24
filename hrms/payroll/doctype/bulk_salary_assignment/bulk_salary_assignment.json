@@ -55,7 +55,9 @@
   "total_company_nhif",
   "column_break_hoei",
   "total_sdl",
-  "total_wcf"
+  "total_wcf",
+  "issues_tab",
+  "issues_html"
  ],
  "fields": [
   {
@@ -365,6 +367,19 @@
    "fieldtype": "Currency",
    "label": "Grand Total Gross + Reimbursement",
    "read_only": 1
+  },
+  {
+   "fieldname": "issues_tab",
+   "fieldtype": "Tab Break",
+   "label": "Issues"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Refreshed on every save. The document cannot be sent for approval or submitted until this list is empty.",
+   "fieldname": "issues_html",
+   "fieldtype": "Text Editor",
+   "label": "Issues to Fix",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
@@ -375,7 +390,7 @@
    "link_fieldname": "bulk_salary_assignment"
   }
  ],
- "modified": "2026-09-01 06:50:32.869916",
+ "modified": "2026-09-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",

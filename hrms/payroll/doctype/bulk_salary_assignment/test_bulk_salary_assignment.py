@@ -8,6 +8,7 @@ from frappe.utils import getdate
 
 from hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment import (
 	BulkSalaryAssignment,
+	apply_site_rate,
 	get_health_insurance,
 	get_payable_days,
 	get_paye,
@@ -30,6 +31,10 @@ class TestPayableDays(IntegrationTestCase):
 		self.assertEqual(get_payable_days(start, end, "2026-04-10", "2026-04-19"), 10)
 		# left before the month started
 		self.assertEqual(get_payable_days(start, end, "2020-01-01", "2026-03-31"), 0)
+		# contract end date on the Employee, no relieving date -> 1st..25th
+		self.assertEqual(get_payable_days(start, end, "2020-01-01", None, "2026-04-25"), 25)
+		# earlier of relieving and contract end wins
+		self.assertEqual(get_payable_days(start, end, "2020-01-01", "2026-04-20", "2026-04-25"), 20)
 
 		# 1,500,000 a month, joined on the 15th of a 30 day month
 		self.assertEqual(1500000 * get_payable_days(start, end, "2026-04-15", None) / 30, 800000)
@@ -159,3 +164,47 @@ class TestReimbursement(IntegrationTestCase):
 		self.assertEqual(row.net_salary, 1000000 - row.total_deductions)
 		self.assertEqual(doc.grand_total_gross, 1000000)
 		self.assertEqual(doc.grand_total_gross_with_reimbursement, 1050000)
+
+
+class TestSiteRate(IntegrationTestCase):
+	"""Site-rate employees are paid what the Site Sheet says, whole, then taxed like anyone."""
+
+	def row(self, **kw):
+		return frappe._dict({"employee": "EMP-1", "employee_name": "Site Guy", "employment_type": "Employment", **kw})
+
+	def test_site_sheet_amount_is_the_base_unprorated(self):
+		row = self.row()
+		apply_site_rate(row, frappe._dict(days=12, amount=1500000))
+		self.assertEqual((row.site_rate, row.payable_days, row.base, row.monthly_gross), (1, 12, 1500000, 1500000))
+		# taxed on the whole amount: no proration ratio shrinks it
+		self.assertEqual(get_paye(row, row.base), 278000)
+
+	def test_not_on_a_site_sheet_pays_nothing(self):
+		row = self.row()
+		apply_site_rate(row, None)
+		self.assertEqual((row.site_rate, row.payable_days, row.base), (1, 0, 0))
+
+	def test_issues(self):
+		doc = frappe._dict(employees=[
+			self.row(employee="A", site_rate=1, base=0, monthly_gross=0, payable_days=0),
+			self.row(employee="B", site_rate=0, base=0, monthly_gross=0, payable_days=30),
+			self.row(employee="C", site_rate=0, base=0, monthly_gross=900000, payable_days=0),
+			self.row(employee="D", site_rate=1, base=500000, monthly_gross=500000, payable_days=10),
+			self.row(employee="E", site_rate=0, base=900000, monthly_gross=900000, payable_days=30),
+		])
+		doc.get_period = lambda: (getdate("2026-09-01"), getdate("2026-09-30"))
+		from unittest.mock import patch
+
+		with patch(
+			"hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment.get_site_payrolls",
+			return_value={"D": "SP-0001"},
+		):
+			issues = BulkSalaryAssignment.get_issues(doc)
+		self.assertEqual(
+			[(key, row.employee) for key, row, _extra in issues],
+			[("no_site_sheet", "A"), ("no_gross", "B"), ("no_payable_days", "C"), ("site_payroll", "D")],
+		)
+		html = BulkSalaryAssignment.render_issues(doc, issues)
+		self.assertIn("/app/engagement-agreement/new?employee=B", html)
+		self.assertIn("/app/site-payroll/SP-0001", html)
+		self.assertIn("Nothing to fix", BulkSalaryAssignment.render_issues(doc, []))

@@ -7,6 +7,8 @@ from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Coalesce
 from frappe.query_builder.terms import SubQuery
+from urllib.parse import quote
+
 from frappe.utils import cint, date_diff, flt, get_first_day, get_last_day, get_link_to_form, getdate
 
 from hrms.hr.utils import validate_bulk_tool_fields
@@ -84,6 +86,7 @@ EMPLOYEE_FIELDS = [
 	"has_helsb",
 	"date_of_joining",
 	"relieving_date",
+	"contract_end_date",
 	"has_child_support",
 	"child_support_amount",
 	"refund",
@@ -125,11 +128,123 @@ def get_paye(row, base: float) -> float:
 	return flt(calculate_paye(gross - full_nssf) * flt(base) / gross)
 
 
-def get_payable_days(start, end, date_of_joining=None, relieving_date=None) -> int:
-	"""Calendar days the employee is engaged for inside [start, end], both ends inclusive."""
+def get_payable_days(
+	start, end, date_of_joining=None, relieving_date=None, contract_end_date=None
+) -> int:
+	"""Calendar days the employee is engaged for inside [start, end], both ends inclusive.
+
+	Engagement stops at whichever comes first: the relieving date or the contract end date
+	(set on Employee when an Engagement Agreement is submitted).
+	"""
 	first = max(getdate(date_of_joining), start) if date_of_joining else start
-	last = min(getdate(relieving_date), end) if relieving_date else end
+	last = min([getdate(d) for d in (relieving_date, contract_end_date) if d] + [end])
 	return max(date_diff(last, first) + 1, 0)
+
+
+def get_site_rate_pay(employees, start, end) -> dict:
+	"""employee -> Site Sheet pay for [start, end], for every employee on site rates.
+
+	An employee is on site rates when their latest submitted Engagement Agreement is on
+	"Day Rates". Their pay is whatever the approved Site Sheets inside the period say:
+	worked days, and fee + food & accommodation as the amount. Rates are the sitesheet
+	app's business, so nothing is recalculated here. A site-rate employee on no approved
+	sheet maps to None.
+	"""
+	if not employees or not frappe.db.table_exists("Engagement Agreement"):
+		return {}
+	latest = {}
+	for a in frappe.get_all(
+		"Engagement Agreement",
+		filters={"employee": ("in", employees), "docstatus": 1, "start_date": ("<=", end)},
+		fields=["employee", "rate_model"],
+		order_by="start_date desc",
+	):
+		latest.setdefault(a.employee, a.rate_model)
+	pay = {e: None for e, model in latest.items() if model == "Day Rates"}
+	if not pay or not frappe.db.table_exists("Site Sheet"):
+		return pay
+	for row in frappe.db.sql(
+		"""
+		select l.employee, sum(l.worked_days) as days,
+			sum(ifnull(l.preview_fee, 0) + ifnull(l.preview_food_accommodation, 0)) as amount
+		from `tabSite Sheet Line` l
+		join `tabSite Sheet` s on s.name = l.parent and l.parenttype = 'Site Sheet'
+		where s.docstatus = 1 and s.from_date >= %(start)s and s.to_date <= %(end)s
+			and l.employee in %(employees)s
+		group by l.employee
+		""",
+		{"start": start, "end": end, "employees": list(pay)},
+		as_dict=True,
+	):
+		pay[row.employee] = row
+	return pay
+
+
+def get_site_payrolls(employees, start, end) -> dict:
+	"""employee -> the submitted Site Payroll that already pays them for part of [start, end]."""
+	if not employees or not frappe.db.table_exists("Site Payroll"):
+		return {}
+	return dict(
+		frappe.db.sql(
+			"""
+			select l.employee, p.name
+			from `tabSite Payroll Line` l
+			join `tabSite Payroll` p on p.name = l.parent and l.parenttype = 'Site Payroll'
+			where p.docstatus = 1 and p.from_date <= %(end)s and p.to_date >= %(start)s
+				and l.employee in %(employees)s
+			""",
+			{"start": start, "end": end, "employees": list(employees)},
+		)
+	)
+
+
+def apply_site_rate(row, pay):
+	"""Put a site-rate employee's Site Sheet pay on a row: the amount is the base, whole.
+
+	monthly_gross is set to the same amount so PAYE taxes all of it (the proration ratio
+	in get_paye is 1) and the Salary Structure Assignment carries it as its base.
+	"""
+	row.site_rate = 1
+	row.payable_days = cint(pay.days) if pay else 0
+	row.monthly_gross = row.base = flt(pay.amount) if pay else 0.0
+
+
+ISSUE_FIXES = {
+	"no_gross": (
+		_("No approved gross salary"),
+		_("Open the employee and submit their Engagement Agreement (or approve their Gross "
+		  "Salary History), then save this document again."),
+	),
+	"no_payable_days": (
+		_("No payable days in this period"),
+		_("They joined after the period, or were relieved or their contract ended before it. "
+		  "Renew the contract with a new Engagement Agreement, or remove them from this list."),
+	),
+	"no_site_sheet": (
+		_("On site rates but not on an approved Site Sheet"),
+		_("Add them to the Site Sheet for this period and get it approved, then save this "
+		  "document again. Their days and pay come only from the Site Sheet."),
+	),
+	"site_payroll": (
+		_("Already paid through Site Payroll"),
+		_("Remove them from this list, or cancel their line on that Site Payroll."),
+	),
+}
+
+
+def issue_buttons(key, row, site_payroll=None):
+	employee = quote(row.employee, safe="")
+	buttons = [(_("Open Employee"), f"/app/employee/{employee}")]
+	if key in ("no_gross", "no_payable_days"):
+		buttons.append((_("New Engagement Agreement"), f"/app/engagement-agreement/new?employee={employee}"))
+	elif key == "no_site_sheet":
+		buttons.append((_("Open Site Sheets"), "/app/site-sheet"))
+	elif key == "site_payroll":
+		buttons.append((site_payroll, f"/app/site-payroll/{quote(site_payroll, safe='')}"))
+	return " ".join(
+		f"<a class='btn btn-xs btn-default' href='{url}'>{frappe.utils.escape_html(label)}</a>"
+		for label, url in buttons
+	)
 
 
 class BulkSalaryAssignment(Document):
@@ -137,14 +252,55 @@ class BulkSalaryAssignment(Document):
 		if self.to_date and getdate(self.to_date) < getdate(self.from_date):
 			frappe.throw(_("To Date cannot be before From Date"))
 		self.sync_from_employee()
-		missing = [d.employee_name or d.employee for d in self.employees if flt(d.monthly_gross) <= 0]
-		if missing:
-			# one message for the whole table; throwing on the first row means finding the
-			# rest one save at a time
-			frappe.throw(
-				_("No approved gross salary for: {0}").format(", ".join(missing))
-			)
 		self.calculate_totals()
+		issues = self.get_issues()
+		self.issues_html = self.render_issues(issues)
+		# a draft with issues saves fine, so HR can come back to it; it just cannot move on
+		if issues and (self.docstatus == 1 or (self.get("workflow_state") or "Draft") != "Draft"):
+			frappe.throw(
+				_("{0} employee(s) cannot be paid yet. Resolve everything on the Issues tab, "
+				  "then try again.").format(len({row.employee for _key, row, _extra in issues})),
+				title=_("Resolve the Issues First"),
+			)
+
+	def get_issues(self) -> list:
+		"""(key, row, extra) for everything that stops a row being paid."""
+		start, end = self.get_period()
+		paid = get_site_payrolls([d.employee for d in self.employees], start, end)
+		issues = []
+		for d in self.employees:
+			if d.site_rate and flt(d.base) <= 0:
+				issues.append(("no_site_sheet", d, None))
+			elif not d.site_rate and flt(d.monthly_gross) <= 0:
+				issues.append(("no_gross", d, None))
+			elif not d.site_rate and not d.payable_days:
+				issues.append(("no_payable_days", d, None))
+			if d.employee in paid:
+				issues.append(("site_payroll", d, paid[d.employee]))
+		return issues
+
+	def render_issues(self, issues) -> str:
+		if not issues:
+			return "<p>{0}</p>".format(_("Nothing to fix. Every employee on this list can be paid."))
+		groups = {}
+		for key, row, extra in issues:
+			groups.setdefault(key, []).append((row, extra))
+		parts = []
+		for key, rows in groups.items():
+			label, fix = ISSUE_FIXES[key]
+			who = "".join(
+				"<li>{0} {1}</li>".format(
+					frappe.utils.escape_html(f"{row.employee} {row.employee_name or ''}".strip()),
+					issue_buttons(key, row, extra),
+				)
+				for row, extra in rows
+			)
+			parts.append(
+				"<h5>{0} ({1})</h5><p><b>{2}</b> {3}</p><ul>{4}</ul>".format(
+					label, len(rows), _("Fix:"), fix, who
+				)
+			)
+		return "".join(parts)
 
 	def get_period(self) -> tuple:
 		"""The stretch of days being paid for. Defaults to the whole month of From Date."""
@@ -198,6 +354,7 @@ class BulkSalaryAssignment(Document):
 				_("Not an employee of {0}: {1}").format(self.company, ", ".join(unknown))
 			)
 
+		site_pay = get_site_rate_pay(list(employees), start, end)
 		for d in self.employees:
 			emp = employees[d.employee]
 			d.employee_name = emp.employee_name
@@ -206,8 +363,13 @@ class BulkSalaryAssignment(Document):
 			d.has_nssf = cint(emp.has_nssf)
 			d.has_health_insurance = cint(emp.has_health_insurance)
 			d.has_heslb = cint(emp.has_helsb)
-			d.payable_days = get_payable_days(start, end, emp.date_of_joining, emp.relieving_date)
+			d.payable_days = get_payable_days(
+				start, end, emp.date_of_joining, emp.relieving_date, emp.contract_end_date
+			)
 			d.base = flt(d.monthly_gross) * d.payable_days / self.days_in_month
+			d.site_rate = 0
+			if d.employee in site_pay:
+				apply_site_rate(d, site_pay[d.employee])
 			d.child_support = flt(emp.child_support_amount) if emp.has_child_support else 0.0
 			d.other_deduction = flt(emp.refund)
 			d.reimbursement = flt(emp.reimbursement)
@@ -310,7 +472,7 @@ class BulkSalaryAssignment(Document):
 	@frappe.whitelist()
 	def get_employee_details(self, employee) -> dict:
 		employee = frappe.get_doc("Employee", employee)
-		return {
+		details = frappe._dict({
 			"employee_name": employee.employee_name,
 			"grade": employee.grade,
 			"has_nssf": employee.has_nssf,
@@ -324,10 +486,18 @@ class BulkSalaryAssignment(Document):
 			"health_insurance_percentage": employee.health_insurance_percentage,
 			"employment_type": employee.employment_type,
 			"payable_days": get_payable_days(
-				*self.get_period(), employee.date_of_joining, employee.relieving_date
+				*self.get_period(),
+				employee.date_of_joining,
+				employee.relieving_date,
+				employee.contract_end_date,
 			),
 			"id": employee.name,
-		}
+		})
+		site_pay = get_site_rate_pay([employee.name], *self.get_period())
+		if employee.name in site_pay:
+			apply_site_rate(details, site_pay[employee.name])
+			details["gross_amount"] = details["monthly_gross"]
+		return details
 
 	@frappe.whitelist()
 	def get_employees(self, advanced_filters: list) -> list:
@@ -366,6 +536,7 @@ class BulkSalaryAssignment(Document):
 				Employee.gross_amount,
 				Employee.date_of_joining,
 				Employee.relieving_date,
+				Employee.contract_end_date,
 				Employee.has_child_support,
 				Employee.child_support_amount,
 				Employee.refund,
@@ -384,9 +555,16 @@ class BulkSalaryAssignment(Document):
 
 		rows = query.run(as_dict=True)
 		for d in rows:
-			d.payable_days = get_payable_days(start, end, d.date_of_joining, d.relieving_date)
+			d.payable_days = get_payable_days(
+				start, end, d.date_of_joining, d.relieving_date, d.contract_end_date
+			)
 			d.child_support = flt(d.child_support_amount) if d.has_child_support else 0.0
 			d.other_deduction = flt(d.refund)
+		site_pay = get_site_rate_pay([d.employee for d in rows], start, end)
+		for d in rows:
+			if d.employee in site_pay:
+				apply_site_rate(d, site_pay[d.employee])
+				d.gross_amount = d.monthly_gross
 		return rows
 
 	def on_submit(self):

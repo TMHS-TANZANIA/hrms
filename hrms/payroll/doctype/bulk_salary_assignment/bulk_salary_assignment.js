@@ -31,6 +31,11 @@ function health_insurance(row) {
 
 // calendar day proration: a joiner on the 15th of a 30 day month earns 16/30 of gross
 function prorate(frm, row) {
+	// site rate rows carry the Site Sheet amount as their gross; it is paid whole, never prorated
+	if (row.site_rate) {
+		row.base = flt(row.monthly_gross);
+		return;
+	}
 	const divisor = cint(frm.doc.days_in_month);
 	row.base = divisor ? flt(flt(row.monthly_gross) * cint(row.payable_days) / divisor) : 0;
 }
@@ -191,6 +196,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 					row.employee_number = d.id || d.employee;
 					row.monthly_gross = flt(d.gross_amount) || 0;
 					row.payable_days = cint(d.payable_days);
+					row.site_rate = cint(d.site_rate);
 					prorate(frm, row);
 					row.child_support = flt(d.child_support);
 					row.other_deduction = flt(d.other_deduction);
@@ -347,6 +353,7 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 					row.employee_number = r.message.id;
 					row.monthly_gross = flt(r.message.gross_amount);
 					row.payable_days = cint(r.message.payable_days);
+					row.site_rate = cint(r.message.site_rate);
 					prorate(frm, row);
 					row.child_support = flt(r.message.child_support);
 					row.other_deduction = flt(r.message.other_deduction);

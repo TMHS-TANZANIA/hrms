@@ -15,3 +15,4 @@ recursive-include hrms *.py
 recursive-include hrms *.svg
 recursive-include hrms *.txt
 recursive-exclude hrms *.pyc
+recursive-include hrms *.xlsx
