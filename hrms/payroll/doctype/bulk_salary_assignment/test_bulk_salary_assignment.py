@@ -3,11 +3,12 @@
 
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, UnitTestCase
 from frappe.utils import getdate
 
 from hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment import (
 	BulkSalaryAssignment,
+	apply_adjustments,
 	apply_site_rate,
 	get_health_insurance,
 	get_payable_days,
@@ -208,3 +209,29 @@ class TestSiteRate(IntegrationTestCase):
 		self.assertIn("/app/engagement-agreement/new?employee=B", html)
 		self.assertIn("/app/site-payroll/SP-0001", html)
 		self.assertIn("Nothing to fix", BulkSalaryAssignment.render_issues(doc, []))
+
+
+class TestAdjustments(UnitTestCase):
+	"""Approved deductions/reimbursements apply only inside their dates; Gross ones cut the base."""
+
+	start, end = getdate("2026-10-01"), getdate("2026-10-31")
+
+	def emp(self, **kw):
+		return frappe._dict({"refund": 100000, "deduction_on": "Net", "reimbursement": 50000, **kw})
+
+	def test_net_deduction_and_reimbursement_in_window(self):
+		row = frappe._dict()
+		apply_adjustments(row, self.emp(deduction_from="2026-10-15", reimbursement_to="2026-10-01"), self.start, self.end)
+		self.assertEqual((row.other_deduction, row.gross_deduction, row.reimbursement), (100000, 0, 50000))
+
+	def test_outside_window_is_not_applied(self):
+		row = frappe._dict()
+		apply_adjustments(row, self.emp(deduction_to="2026-09-30", reimbursement_from="2026-11-01"), self.start, self.end)
+		self.assertEqual((row.other_deduction, row.gross_deduction, row.reimbursement), (0, 0, 0))
+
+	def test_gross_deduction_lowers_what_paye_sees(self):
+		row = frappe._dict({"employment_type": "Employment", "monthly_gross": 1100000})
+		apply_adjustments(row, self.emp(deduction_on="Gross"), self.start, self.end)
+		self.assertEqual((row.other_deduction, row.gross_deduction), (0, 100000))
+		# base 1,100,000 - 100,000 = 1,000,000 -> the same PAYE as a 1,000,000 gross
+		self.assertEqual(get_paye(row, 1000000), get_paye(frappe._dict(employment_type="Employment", monthly_gross=1000000), 1000000))

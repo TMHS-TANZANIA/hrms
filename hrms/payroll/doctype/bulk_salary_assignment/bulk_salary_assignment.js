@@ -33,11 +33,13 @@ function health_insurance(row) {
 function prorate(frm, row) {
 	// site rate rows carry the Site Sheet amount as their gross; it is paid whole, never prorated
 	if (row.site_rate) {
-		row.base = flt(row.monthly_gross);
+		row.base = Math.max(flt(row.monthly_gross) - flt(row.gross_deduction), 0);
 		return;
 	}
 	const divisor = cint(frm.doc.days_in_month);
-	row.base = divisor ? flt(flt(row.monthly_gross) * cint(row.payable_days) / divisor) : 0;
+	const prorated = divisor ? flt(flt(row.monthly_gross) * cint(row.payable_days) / divisor) : 0;
+	// a deduction on gross is taken whole off the base, before anything is worked out on it
+	row.base = Math.max(prorated - flt(row.gross_deduction), 0);
 }
 
 // mirrors PAYE_EMPLOYMENT_TYPES and the PAYE condition on the Salary Structure
@@ -47,7 +49,7 @@ const PAYE_EMPLOYMENT_TYPES = ["Employment"];
 // gross first would drop a part month employee into a lower band. Tax the whole month,
 // then prorate the tax on the same ratio the gross was prorated on
 function get_paye(row) {
-	const gross = flt(row.monthly_gross);
+	const gross = flt(row.monthly_gross) - flt(row.gross_deduction);
 	if (!gross || !PAYE_EMPLOYMENT_TYPES.includes(row.employment_type)) return 0;
 	const full_nssf = row.has_nssf ? flt(gross * 0.1) : 0;
 	return flt((paye_calculator(gross - full_nssf) * flt(row.base)) / gross);
@@ -197,6 +199,7 @@ frappe.ui.form.on("Bulk Salary Assignment", {
 					row.monthly_gross = flt(d.gross_amount) || 0;
 					row.payable_days = cint(d.payable_days);
 					row.site_rate = cint(d.site_rate);
+					row.gross_deduction = flt(d.gross_deduction);
 					prorate(frm, row);
 					row.child_support = flt(d.child_support);
 					row.other_deduction = flt(d.other_deduction);
@@ -354,6 +357,7 @@ frappe.ui.form.on("Bulk Salary Assignment Employee", {
 					row.monthly_gross = flt(r.message.gross_amount);
 					row.payable_days = cint(r.message.payable_days);
 					row.site_rate = cint(r.message.site_rate);
+					row.gross_deduction = flt(r.message.gross_deduction);
 					prorate(frm, row);
 					row.child_support = flt(r.message.child_support);
 					row.other_deduction = flt(r.message.other_deduction);

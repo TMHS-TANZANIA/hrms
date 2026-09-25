@@ -90,7 +90,12 @@ EMPLOYEE_FIELDS = [
 	"has_child_support",
 	"child_support_amount",
 	"refund",
+	"deduction_on",
+	"deduction_from",
+	"deduction_to",
 	"reimbursement",
+	"reimbursement_from",
+	"reimbursement_to",
 	"health_insurance_amount",
 	"health_insurance_percentage",
 	"employment_type",
@@ -121,7 +126,9 @@ def get_paye(row, base: float) -> float:
 	gross and the resulting tax is prorated on exactly the ratio the gross was, which is
 	what the PAYE salary component does on the Salary Slip via Depends on Payment Days.
 	"""
-	gross = flt(row.monthly_gross)
+	# a deduction on gross lowers the monthly figure the bands see as well
+	# ponytail: exact for a whole month; a part month employee's ratio is approximate
+	gross = flt(row.monthly_gross) - flt(row.get("gross_deduction"))
 	if not gross or not is_paye_applicable(row.employment_type):
 		return 0.0
 	full_nssf = flt(gross * NSSF_RATE) if row.has_nssf else 0.0
@@ -139,6 +146,29 @@ def get_payable_days(
 	first = max(getdate(date_of_joining), start) if date_of_joining else start
 	last = min([getdate(d) for d in (relieving_date, contract_end_date) if d] + [end])
 	return max(date_diff(last, first) + 1, 0)
+
+
+def in_window(start, end, from_date, to_date) -> bool:
+	"""Whether a scheduled amount is live in [start, end]. No dates means open-ended."""
+	return (not from_date or getdate(from_date) <= end) and (not to_date or getdate(to_date) >= start)
+
+
+def apply_adjustments(row, emp, start, end):
+	"""The Employee's approved deduction and reimbursement, if their dates touch the period.
+
+	They are monthly figures set by a Payroll Adjustment and are taken whole in any month
+	they touch. A deduction on Net comes off net pay; one on Gross goes to gross_deduction,
+	which lowers the base before anything is worked out on it.
+	"""
+	deduction = flt(emp.refund) if in_window(start, end, emp.deduction_from, emp.deduction_to) else 0.0
+	gross = emp.deduction_on == "Gross"
+	row.gross_deduction = deduction if gross else 0.0
+	row.other_deduction = 0.0 if gross else deduction
+	row.reimbursement = (
+		flt(emp.reimbursement)
+		if in_window(start, end, emp.reimbursement_from, emp.reimbursement_to)
+		else 0.0
+	)
 
 
 def get_site_rate_pay(employees, start, end) -> dict:
@@ -370,9 +400,9 @@ class BulkSalaryAssignment(Document):
 			d.site_rate = 0
 			if d.employee in site_pay:
 				apply_site_rate(d, site_pay[d.employee])
+			apply_adjustments(d, emp, start, end)
+			d.base = max(flt(d.base) - d.gross_deduction, 0.0)
 			d.child_support = flt(emp.child_support_amount) if emp.has_child_support else 0.0
-			d.other_deduction = flt(emp.refund)
-			d.reimbursement = flt(emp.reimbursement)
 			d.health_insurance_amount = flt(emp.health_insurance_amount)
 			d.health_insurance_percentage = emp.health_insurance_percentage
 			d.employment_type = emp.employment_type
@@ -480,8 +510,6 @@ class BulkSalaryAssignment(Document):
 			"has_heslb": employee.has_helsb,
 			"gross_amount": employee.gross_amount,
 			"child_support": flt(employee.child_support_amount) if employee.has_child_support else 0.0,
-			"other_deduction": flt(employee.refund),
-			"reimbursement": flt(employee.reimbursement),
 			"health_insurance_amount": flt(employee.health_insurance_amount),
 			"health_insurance_percentage": employee.health_insurance_percentage,
 			"employment_type": employee.employment_type,
@@ -493,6 +521,7 @@ class BulkSalaryAssignment(Document):
 			),
 			"id": employee.name,
 		})
+		apply_adjustments(details, employee, *self.get_period())
 		site_pay = get_site_rate_pay([employee.name], *self.get_period())
 		if employee.name in site_pay:
 			apply_site_rate(details, site_pay[employee.name])
@@ -540,7 +569,12 @@ class BulkSalaryAssignment(Document):
 				Employee.has_child_support,
 				Employee.child_support_amount,
 				Employee.refund,
+				Employee.deduction_on,
+				Employee.deduction_from,
+				Employee.deduction_to,
 				Employee.reimbursement,
+				Employee.reimbursement_from,
+				Employee.reimbursement_to,
 				Employee.health_insurance_amount,
 				Employee.health_insurance_percentage,
 				Employee.employment_type,
@@ -559,7 +593,7 @@ class BulkSalaryAssignment(Document):
 				start, end, d.date_of_joining, d.relieving_date, d.contract_end_date
 			)
 			d.child_support = flt(d.child_support_amount) if d.has_child_support else 0.0
-			d.other_deduction = flt(d.refund)
+			apply_adjustments(d, d.copy(), start, end)
 		site_pay = get_site_rate_pay([d.employee for d in rows], start, end)
 		for d in rows:
 			if d.employee in site_pay:

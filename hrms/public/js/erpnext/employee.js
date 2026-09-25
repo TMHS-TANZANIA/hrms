@@ -13,6 +13,15 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 
+	// the deduction and reimbursement fields are read only: they change through an approval
+	new_deduction(frm) {
+		frappe.new_doc("Payroll Adjustment", { employee: frm.doc.name, type: "Deduction" });
+	},
+
+	new_reimbursement(frm) {
+		frappe.new_doc("Payroll Adjustment", { employee: frm.doc.name, type: "Reimbursement" });
+	},
+
 	date_of_birth(frm) {
 		frm.call({
 			method: "hrms.overrides.employee_master.get_retirement_date",

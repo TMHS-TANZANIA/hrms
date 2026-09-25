@@ -23,6 +23,7 @@
   "paye",
   "child_support",
   "other_deduction",
+  "gross_deduction",
   "total_deductions",
   "net_salary",
   "has_heslb",
@@ -180,6 +181,13 @@
    "read_only": 1
   },
   {
+   "description": "A deduction on gross: taken off the base before NSSF, NHIF, HESLB, PAYE, SDL and WCF are worked out",
+   "fieldname": "gross_deduction",
+   "fieldtype": "Currency",
+   "label": "Gross Deduction",
+   "read_only": 1
+  },
+  {
    "description": "Fixed amount from the Employee record. Overrides the percentage when set.",
    "fieldname": "health_insurance_amount",
    "fieldtype": "Currency",
@@ -215,7 +223,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-24 12:00:00.000000",
+ "modified": "2026-09-25 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment Employee",
