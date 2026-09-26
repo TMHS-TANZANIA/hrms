@@ -354,6 +354,13 @@ class PayrollEntry(Document):
 
 	@frappe.whitelist()
 	def submit_salary_slips(self):
+		# ponytail: disabled until slips mirror the Bulk Salary Assignment (dated and gross
+		# deductions, site rates); remove this with the salary slip work
+		frappe.throw(
+			_("Salary Slips cannot be submitted yet: they do not match the Bulk Salary Assignment. "
+			  "Pay from the Payroll Entry's Bank Sheets."),
+			title=_("Salary Slip Submission Disabled"),
+		)
 		self.check_permission("write")
 		salary_slips = self.get_sal_slip_list(ss_status=0)
 

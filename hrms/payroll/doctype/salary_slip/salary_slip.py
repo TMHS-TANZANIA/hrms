@@ -204,6 +204,16 @@ class SalarySlip(TransactionBase):
 	def on_update(self):
 		self.publish_update()
 
+	def before_submit(self):
+		# ponytail: disabled until slips mirror the Bulk Salary Assignment (dated and gross
+		# deductions, site rates); remove this, and the one in PayrollEntry.submit_salary_slips,
+		# with the salary slip work
+		frappe.throw(
+			_("Salary Slips cannot be submitted yet: they do not match the Bulk Salary Assignment. "
+			  "Pay from the Payroll Entry's Bank Sheets."),
+			title=_("Salary Slip Submission Disabled"),
+		)
+
 	def on_submit(self):
 		if self.net_pay < 0:
 			frappe.throw(_("Net Pay cannot be less than 0"))
