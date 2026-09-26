@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_copy": 1,
+ "allow_copy": 0,
  "allow_rename": 1,
  "autoname": "field:title",
  "creation": "2026-09-01 06:46:54.554162",
@@ -390,7 +390,7 @@
    "link_fieldname": "bulk_salary_assignment"
   }
  ],
- "modified": "2026-09-24 12:00:00.000000",
+ "modified": "2026-09-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Bulk Salary Assignment",
@@ -421,6 +421,18 @@
    "role": "Accounts Manager",
    "select": 1,
    "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Finance Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
   }
  ],
  "protect_attached_files": 1,
