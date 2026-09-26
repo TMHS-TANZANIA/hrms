@@ -37,7 +37,7 @@ ROWS = [
 		nida_number="1976-0221-1111-2222",
 		basic=2000000,
 		nssf=200000,
-		net_pay=1750000,
+		net_salary=1700000,
 		reimbursement=50000,
 		salary_mode="Bank",
 		bank_name="NMB Bank Plc",
@@ -50,17 +50,17 @@ BANK_ROWS = ROWS + [
 	_dict(
 		employee_name="Neema Juma",
 		basic=900000,
-		net_pay=900000,
+		net_salary=900000,
 		reimbursement=0,
 		salary_mode="Bank",
 		bank_name="Stanbic",
 		bank_ac_no="98765432",
 	),
-	# volunteer: no basic, so the whole net pay is the reimbursement
+	# volunteer: no basic, so all they are paid is the reimbursement
 	_dict(
 		employee_name="Zawadi Volunteer",
 		basic=0,
-		net_pay=300000,
+		net_salary=0,
 		reimbursement=300000,
 		salary_mode="Bank",
 		bank_name="CRDB",
@@ -70,7 +70,7 @@ BANK_ROWS = ROWS + [
 		employee_name="Paid In Cash",
 		basic=500000,
 		salary_mode="Cash",
-		net_pay=500000,
+		net_salary=500000,
 		reimbursement=0,
 	),
 ]
@@ -162,7 +162,7 @@ def main():
 	assert salary["A1"].value == "Beneficiary_Name", "template header row was overwritten"
 	assert [c.value for c in salary[2]] == [
 		"ABASI MOHAMED HASSANI",
-		1700000,  # net pay less the reimbursement, which goes out on its own sheet
+		1700000,  # the table's net salary; the reimbursement goes out on its own sheet
 		"123456789",
 		"INTERNAL",
 		"NMB BANK PLC",
@@ -194,7 +194,7 @@ def main():
 	sr.frappe.throw = lambda msg, *a, **kw: thrown.append(msg)
 	sr._ = lambda msg: msg
 	sr.build_bank_transactions(
-		[_dict(employee_name="No Account", basic=1, salary_mode="Bank", net_pay=1, reimbursement=0, bank_ac_no="")],
+		[_dict(employee_name="No Account", basic=1, salary_mode="Bank", net_salary=1, reimbursement=0, bank_ac_no="")],
 		DOC,
 	)
 	assert thrown, "missing account number must throw"

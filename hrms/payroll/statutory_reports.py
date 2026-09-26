@@ -21,11 +21,6 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "statutory_templates")
 
 REPORTS = ("PAYE", "SDL", "NSSF", "NHIF", "WCF")
 
-# component name -> value we pull off each salary slip
-BASIC_COMPONENT = "Basic"
-NSSF_COMPONENT = "NSSF"
-REIMBURSEMENT_COMPONENT = "REIMBURSEMENT"
-
 # bank codes paid inside the bank itself; everything else is an interbank transfer
 INTERNAL_BANK = "NMB"
 
@@ -36,17 +31,23 @@ def digits(value: str) -> str:
 
 
 def get_rows(payroll_entry: str) -> list[dict]:
-	"""Employee + salary slip figures for every slip in the payroll entry."""
-	ss = frappe.qb.DocType("Salary Slip")
+	"""Employee figures for every row of the payroll entry's employee table.
+
+	The table is the Bulk Salary Assignment's own computation and is what finance checks;
+	salary slips prorate and tax differently, so reading them paid amounts nobody saw.
+	"""
+	pd = frappe.qb.DocType("Payroll Employee Detail")
 	emp = frappe.qb.DocType("Employee")
 
 	rows = (
-		frappe.qb.from_(ss)
+		frappe.qb.from_(pd)
 		.join(emp)
-		.on(ss.employee == emp.name)
+		.on(pd.employee == emp.name)
 		.select(
-			ss.name.as_("salary_slip"),
-			ss.net_pay,
+			pd.base.as_("basic"),
+			pd.nssf,
+			pd.reimbursement,
+			pd.net_salary,
 			emp.name.as_("employee"),
 			emp.employee_name,
 			emp.first_name,
@@ -70,30 +71,17 @@ def get_rows(payroll_entry: str) -> list[dict]:
 			emp.bank_name,
 			emp.bank_ac_no,
 		)
-		.where((ss.payroll_entry == payroll_entry) & (ss.docstatus != 2))
+		.where((pd.parent == payroll_entry) & (pd.parenttype == "Payroll Entry"))
 		.orderby(emp.employee_name)
 	).run(as_dict=True)
 
 	if not rows:
-		frappe.throw(_("No salary slips found for {0}").format(payroll_entry))
+		frappe.throw(_("No employees found in {0}").format(payroll_entry))
 
-	amounts = frappe.get_all(
-		"Salary Detail",
-		filters={
-			"parent": ("in", [r.salary_slip for r in rows]),
-			"salary_component": ("in", [BASIC_COMPONENT, NSSF_COMPONENT, REIMBURSEMENT_COMPONENT]),
-		},
-		fields=["parent", "salary_component", "amount"],
-	)
-	by_slip = {}
-	for a in amounts:
-		by_slip.setdefault(a.parent, {})[a.salary_component] = flt(a.amount)
-
+	# the table stores prorated amounts unrounded; banks and portals take cents
 	for r in rows:
-		slip = by_slip.get(r.salary_slip, {})
-		r.basic = slip.get(BASIC_COMPONENT, 0)
-		r.nssf = slip.get(NSSF_COMPONENT, 0)
-		r.reimbursement = slip.get(REIMBURSEMENT_COMPONENT, 0)
+		for f in ("basic", "nssf", "reimbursement", "net_salary"):
+			r[f] = flt(r[f], 2)
 
 	return rows
 
@@ -296,17 +284,17 @@ def bank_amount(row, sheet: str) -> float:
 	"""What one sheet pays one employee.
 
 	The split is basic pay, not employment type: a volunteer or consultant engaged for a
-	reimbursement alone has no basic, so their whole net pay is that reimbursement and it
+	reimbursement alone has no basic, so that reimbursement is all they are paid and it
 	goes out on the Volunteer sheet. Give one of them a real salary and they move onto the
 	staff sheets on their own, and no employment type added later falls through a gap.
 	"""
 	if not flt(row.basic):
-		return flt(row.net_pay) if sheet == "Volunteer" else 0.0
+		return flt(row.reimbursement) if sheet == "Volunteer" else 0.0
 	if sheet == "Reimbursement":
 		return flt(row.reimbursement)
 	if sheet == "Salary":
-		# reimbursement is paid out separately, so it stays out of the salary transfer
-		return flt(row.net_pay) - flt(row.reimbursement)
+		# net salary already leaves the reimbursement out: it goes on its own sheet
+		return flt(row.net_salary)
 	return 0.0
 
 
