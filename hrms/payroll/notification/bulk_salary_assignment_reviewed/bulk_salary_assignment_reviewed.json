@@ -1,0 +1,28 @@
+{
+ "attach_print": 0,
+ "channel": "Email",
+ "condition": null,
+ "date_changed": null,
+ "days_in_advance": 0,
+ "docstatus": 0,
+ "doctype": "Notification",
+ "document_type": "Bulk Salary Assignment",
+ "enabled": 1,
+ "event": "Submit",
+ "idx": 0,
+ "is_standard": 1,
+ "message": "",
+ "modified": "2026-09-26 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Payroll",
+ "name": "Bulk Salary Assignment Reviewed",
+ "owner": "Administrator",
+ "recipients": [
+  {
+   "receiver_by_role": "HR Manager"
+  }
+ ],
+ "send_system_notification": 1,
+ "subject": "Reviewed: Bulk Salary Assignment {{ doc.name }} has been approved",
+ "value_changed": null
+}
