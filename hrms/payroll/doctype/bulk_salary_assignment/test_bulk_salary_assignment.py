@@ -10,6 +10,7 @@ from hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment import (
 	BulkSalaryAssignment,
 	apply_adjustments,
 	apply_site_rate,
+	employer_contributions,
 	get_health_insurance,
 	get_payable_days,
 	get_paye,
@@ -235,3 +236,22 @@ class TestAdjustments(UnitTestCase):
 		self.assertEqual((row.other_deduction, row.gross_deduction), (0, 100000))
 		# base 1,100,000 - 100,000 = 1,000,000 -> the same PAYE as a 1,000,000 gross
 		self.assertEqual(get_paye(row, 1000000), get_paye(frappe._dict(employment_type="Employment", monthly_gross=1000000), 1000000))
+
+
+class TestEmployerContributions(UnitTestCase):
+	"""What the Salary Slip posts as the company's NSSF/NHIF/SDL/WCF."""
+
+	def test_nhif_topped_up_to_the_minimum(self):
+		row = frappe._dict(base=500000, nhif=15000, has_nssf=1, has_health_insurance=1)
+		c = employer_contributions(row)
+		self.assertEqual((c.nssf, c.nhif, c.sdl, c.wcf), (50000, 25000, 17500, 2500))
+
+	def test_share_stands_in_for_a_lost_flag(self):
+		# rows copied onto older Payroll Entries carry the shares but not the flags
+		row = frappe._dict(base=1000000, nssf=100000, nhif=30000, has_nssf=0, has_health_insurance=0)
+		c = employer_contributions(row)
+		self.assertEqual((c.nssf, c.nhif), (100000, 30000))
+
+	def test_nothing_without_flag_or_share(self):
+		c = employer_contributions(frappe._dict(base=1000000))
+		self.assertEqual((c.nssf, c.nhif), (0, 0))

@@ -135,6 +135,28 @@ def get_paye(row, base: float) -> float:
 	return flt(calculate_paye(gross - full_nssf) * flt(base) / gross)
 
 
+def employer_contributions(row) -> frappe._dict:
+	"""What the company pays on top of one row's salary, worked from its base.
+
+	The Salary Slip posts these as its Expense/Payable component pairs, so both read them
+	from here and cannot drift apart.
+	"""
+	base = flt(row.base)
+	# older Payroll Entries lost the flags when copying rows, but an employee share is only
+	# ever charged with the flag on, so the share stands in for it
+	has_nssf = row.has_nssf or flt(row.nssf)
+	has_health_insurance = row.has_health_insurance or flt(row.nhif)
+	return frappe._dict(
+		nssf=flt(base * NSSF_RATE) if has_nssf else 0.0,
+		# the company matches the employee's 3%, except where that leaves the combined
+		# contribution under the 40,000 minimum: then it pays the gap instead. Above a base
+		# of 666,667 the plain 3% already clears the minimum, so no top up applies.
+		nhif=max(flt(row.nhif), MIN_NHIF_CONTRIBUTION - flt(row.nhif)) if has_health_insurance else 0.0,
+		sdl=flt(base * SDL_RATE),
+		wcf=flt(base * WCF_RATE),
+	)
+
+
 def get_payable_days(
 	start, end, date_of_joining=None, relieving_date=None, contract_end_date=None
 ) -> int:
@@ -458,18 +480,13 @@ class BulkSalaryAssignment(Document):
 			totals["total_child_support"] += flt(d.child_support)
 			totals["total_other_deductions"] += flt(d.other_deduction)
 			totals["total_deductions"] += d.total_deductions
-			totals["total_sdl"] += flt(base * SDL_RATE)
-			totals["total_wcf"] += flt(base * WCF_RATE)
 			totals["grand_total_net_salary"] += d.net_salary
 
-			if d.has_nssf:
-				totals["total_company_nssf"] += flt(base * NSSF_RATE)
-			if d.has_health_insurance:
-				# the company matches the employee's 3%, except where that leaves the
-				# combined contribution under the 40,000 minimum: then it pays the gap
-				# instead. Above a base of 666,667 the plain 3% already clears the
-				# minimum, so no top up applies.
-				totals["total_company_nhif"] += max(d.nhif, MIN_NHIF_CONTRIBUTION - d.nhif)
+			company = employer_contributions(d)
+			totals["total_sdl"] += company.sdl
+			totals["total_wcf"] += company.wcf
+			totals["total_company_nssf"] += company.nssf
+			totals["total_company_nhif"] += company.nhif
 
 		self.update(totals)
 		self.grand_total_gross = totals["total_base"]

@@ -204,16 +204,6 @@ class SalarySlip(TransactionBase):
 	def on_update(self):
 		self.publish_update()
 
-	def before_submit(self):
-		# ponytail: disabled until slips mirror the Bulk Salary Assignment (dated and gross
-		# deductions, site rates); remove this, and the one in PayrollEntry.submit_salary_slips,
-		# with the salary slip work
-		frappe.throw(
-			_("Salary Slips cannot be submitted yet: they do not match the Bulk Salary Assignment. "
-			  "Pay from the Payroll Entry's Bank Sheets."),
-			title=_("Salary Slip Submission Disabled"),
-		)
-
 	def on_submit(self):
 		if self.net_pay < 0:
 			frappe.throw(_("Net Pay cannot be less than 0"))
@@ -858,10 +848,91 @@ class SalarySlip(TransactionBase):
 
 		set_loan_repayment(self)
 
+		self.apply_bulk_salary_assignment()
 		self.set_precision_for_component_amounts()
 		self.set_net_pay()
 		if not skip_tax_breakup_computation:
 			self.compute_income_tax_breakup()
+
+	def apply_bulk_salary_assignment(self):
+		"""Pay exactly what the Payroll Entry's employee table shows, when it has one.
+
+		A Payroll Entry made from a Bulk Salary Assignment carries that document's figures per
+		employee, and those are what finance approves and the bank sheets pay. The structure
+		formulas prorate on payment days, tax the prorated pay and know nothing of child
+		support, site rates or dated deductions, so their amounts are replaced here with the
+		table's. Components the table does not cover (loans, additional salary) are left as is.
+		"""
+		from hrms.payroll.doctype.bulk_salary_assignment.bulk_salary_assignment import (
+			employer_contributions,
+		)
+
+		if not self.payroll_entry or not frappe.db.get_value(
+			"Payroll Entry", self.payroll_entry, "bulk_salary_assignment"
+		):
+			return
+
+		row = frappe.db.get_value(
+			"Payroll Employee Detail",
+			{"parent": self.payroll_entry, "parenttype": "Payroll Entry", "employee": self.employee},
+			["base", "reimbursement", "nssf", "nhif", "heslb", "paye", "child_support",
+			 "other_deduction", "has_nssf", "has_health_insurance"],
+			as_dict=True,
+		)
+		if not row:
+			return
+
+		company = employer_contributions(row)
+		figures = {
+			"earnings": {
+				"Basic": row.base,
+				"REIMBURSEMENT": row.reimbursement,
+				"NSSF Expense": company.nssf,
+				"NHIF Expense": company.nhif,
+				"SDL Expense": company.sdl,
+				"WCF Contribution": company.wcf,
+			},
+			"deductions": {
+				"NSSF": row.nssf,
+				"NHIF (National Health Insurance Fund)": row.nhif,
+				"Heslb": row.heslb,
+				"PAYE": row.paye,
+				"Child Support": row.child_support,
+				"Deduction": row.other_deduction,
+				"NSSF Payable": company.nssf,
+				"NHIF Payable": company.nhif,
+				"SDL Payable": company.sdl,
+				"WCF Payable": company.wcf,
+			},
+		}
+
+		for component_type, amounts in figures.items():
+			# drop the structure's rows for these components, keep everything else
+			self.set(
+				component_type,
+				[d for d in self.get(component_type) if d.salary_component not in amounts or d.additional_salary],
+			)
+			for component, amount in amounts.items():
+				amount = flt(amount, 2)
+				if not amount:
+					continue
+				data = get_salary_component_data(component)
+				if not data:
+					frappe.throw(
+						_("Salary Component {0} is missing; create it to pay this slip").format(
+							frappe.bold(component)
+						)
+					)
+				d = self.append(component_type, data)
+				# the table's figures are already prorated to the days worked
+				d.depends_on_payment_days = 0
+				d.default_amount = d.amount = amount
+
+		# gross was totalled from the structure's rows before they were replaced
+		self.gross_pay = self.get_component_totals("earnings")
+		self.base_gross_pay = flt(
+			flt(self.gross_pay) * flt(self.exchange_rate), self.precision("base_gross_pay")
+		)
 
 	def set_net_pay(self):
 		self.total_deduction = self.get_component_totals("deductions")
